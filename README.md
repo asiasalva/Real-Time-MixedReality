@@ -1,4 +1,4 @@
 # Internship
 
-This repository is aimed to keep my work for my bachelor's internship @FBK.
+This is my code for taking data from mobile camera. 
 
