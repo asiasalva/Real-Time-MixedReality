@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">RoyaleAndroidSample</string>
+    <string name="start">Start</string>
+    <string name="royale_image_description">the data received from royale</string>
+    <string name="button">Button</string>
+    <string name="button1">Button</string>
+    <string name="start_rec">Start Rec</string>
+    <string name="stop">Stop</string>
+</resources>
