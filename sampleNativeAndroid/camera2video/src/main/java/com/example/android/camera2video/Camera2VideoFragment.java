@@ -283,12 +283,14 @@ public class Camera2VideoFragment extends Fragment
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
         mButtonVideo = (Button) view.findViewById(R.id.video);
         mButtonVideo.setOnClickListener(this);
+        Log.d(TAG,"sono dopo il setOnClickListener");
         view.findViewById(R.id.info).setOnClickListener(this);
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        Log.d(TAG,"OnResume");
         startBackgroundThread();
         if (mTextureView.isAvailable()) {
             openCamera(mTextureView.getWidth(), mTextureView.getHeight());
@@ -300,6 +302,7 @@ public class Camera2VideoFragment extends Fragment
     @Override
     public void onPause() {
         closeCamera();
+        Log.d(TAG,"onPause");
         stopBackgroundThread();
         super.onPause();
     }

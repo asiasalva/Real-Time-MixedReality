@@ -7,11 +7,35 @@
 #include <thread>
 #include <chrono>
 #include <memory>
+#include <sample_utils/PlatformResources.hpp>
+#include <condition_variable>
+#include <mutex>
+#include <cstdint>
+#include <string>
 
 #define TAG "com.pmdtec.jroyale.jni"
 
+// this represents the main camera device object
+std::unique_ptr<royale::ICameraDevice> cameraDevice;
+bool notified;
+
 #define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define LOGI(...)  __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+
+
+
+#define CHECKED_CAMERA_METHOD(METHOD_TO_INVOKE)\
+do\
+{\
+    auto status = METHOD_TO_INVOKE;\
+    if (royale::CameraStatus::SUCCESS != status)\
+    {\
+        std::cout << royale::getStatusString(status).c_str() << std::endl\
+            << "Press Enter to exit the application ...";\
+        \
+        return -1;\
+    }\
+} while (0)
 
 namespace
 {
@@ -23,9 +47,6 @@ namespace
 
     uint16_t width = 0;
     uint16_t height = 0;
-
-    // this represents the main camera device object
-    std::unique_ptr<royale::ICameraDevice> cameraDevice;
 
     class MyListener : public royale::IDepthDataListener
     {
@@ -102,11 +123,44 @@ namespace
         }
     };
 
+    /**
+ * This variables are used to ensure that the
+ * main method is open until the camera has stopped capture.
+ */
+    std::mutex mtx;
+    std::condition_variable condition;
+
+    /**
+     * The MyRecordListener waits for the camera device to close.
+     * Then the MyRocordListener will tidy up the camera device.
+     */
+    class MyRecordListener : public royale::IRecordStopListener {
+    public:
+
+        void onRecordingStopped(const uint32_t numFrames) {
+            std::cout << "The onRecordingStopped was invoked with numFrames=" << numFrames
+                      << std::endl;
+
+            // Notify the main method to return
+            std::unique_lock<std::mutex> lock(mtx);
+            notified = true;
+            condition.notify_all();
+        }
+    };
+
+    MyRecordListener myRecordListener;
     MyListener listener;
 
 #ifdef __cplusplus
     extern "C" {
 #endif
+
+    JNIEXPORT void JNICALL
+    Java_com_pmdtec_sample_NativeCamera_semaphoreNotify(JNIEnv *env, jclass type, jboolean notificated) {
+        //Set to 1 if need to record, 0 if you want to stop recording
+        notified = notificated;
+    }
+
 
     JNIEXPORT jint JNICALL
     JNI_OnLoad (JavaVM *vm, void *)
@@ -290,6 +344,62 @@ namespace
     {
         cameraDevice->stopCapture ();
     }
+
+    JNIEXPORT jint JNICALL
+    Java_com_pmdtec_sample_NativeCamera_recordRRF(JNIEnv *env, jclass type, jint argc, jstring file_name, jintArray argv)
+    {
+        LOGI ("JNI RECORDRRF");
+        // Receive the parameters to capture from the command line:
+        if (2 > argc) {
+            std::cout << "There are no parameters specified! Use:" << std::endl
+                      << file_name
+                      << " C:/path/to/file.rrf [numberOfFrames [framesToSkip [msToSkip]]]"
+                      << std::endl;
+            LOGI ("There are no parameters specified. ");
+            return -1;
+        }
+
+        const char *file = (*env).GetStringUTFChars(file_name, 0);
+        //royale::String file(argv[1]);
+        jint *args;
+
+        args=(*env).GetIntArrayElements(argv,0);
+
+        auto numberOfFrames = argc >= 2 ? (args[1]) : 0;
+        auto framesToSkip = argc >= 3 ? (args[2]) : 0;
+        auto msToSkip = argc >= 4 ? (args[3]) : 0;
+
+        LOGI ("Ho creato le variabili nella funzione jni: %s %d %d %d e notified: %d", file, numberOfFrames, framesToSkip, msToSkip, notified);
+        //LOGI("La variabile notified vale: %b", notified);
+        if(notified) {
+            LOGI ("Prima di registrare");
+            CHECKED_CAMERA_METHOD (cameraDevice->startRecording(file));//startRecording(file);//, numberOfFrames, framesToSkip, msToSkip);
+            LOGI ("Sono dopo la registrazione ma nell'if");
+            return 1;
+        } else {
+            //LOGI("sono nell'else di notified");
+            //CHECKED_CAMERA_METHOD(cameraDevice->stopRecording());
+            //LOGI("Ho smesso di recordare.");
+            LOGI("Can't record now.");
+            return -1;
+        }
+
+        (*env).ReleaseStringUTFChars(file_name, file);
+
+    }
+        JNIEXPORT jint JNICALL
+        Java_com_pmdtec_sample_NativeCamera_stopRegistration(JNIEnv *env, jclass type) {
+            //notified = true;
+            if (!notified) {
+                LOGI("La variabile notified vale: %d", notified);
+                CHECKED_CAMERA_METHOD (cameraDevice->stopRecording());
+                return 1;
+            } else
+            {
+                LOGI("Can't stop recording.");
+                return -1;
+            }
+        }
 
 #ifdef __cplusplus
 }

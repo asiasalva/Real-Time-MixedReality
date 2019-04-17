@@ -31,4 +31,10 @@ public final class NativeCamera
     public static native void closeCameraNative();
 
     public static native void registerAmplitudeListener(AmplitudeListener amplitudeListener);
+
+    public static native int recordRRF(int argc, String file, int[] array);
+
+    public static native int stopRegistration();
+
+    public static native void semaphoreNotify(boolean notify);
 }
