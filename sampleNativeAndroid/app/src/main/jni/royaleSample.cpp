@@ -360,7 +360,6 @@ namespace
         }
 
         const char *file = (*env).GetStringUTFChars(file_name, 0);
-        //royale::String file(argv[1]);
         jint *args;
 
         args=(*env).GetIntArrayElements(argv,0);
@@ -370,16 +369,12 @@ namespace
         auto msToSkip = argc >= 4 ? (args[3]) : 0;
 
         LOGI ("Ho creato le variabili nella funzione jni: %s %d %d %d e notified: %d", file, numberOfFrames, framesToSkip, msToSkip, notified);
-        //LOGI("La variabile notified vale: %b", notified);
         if(notified) {
             LOGI ("Prima di registrare");
-            CHECKED_CAMERA_METHOD (cameraDevice->startRecording(file));//startRecording(file);//, numberOfFrames, framesToSkip, msToSkip);
+            CHECKED_CAMERA_METHOD (cameraDevice->startRecording(file));
             LOGI ("Sono dopo la registrazione ma nell'if");
             return 1;
         } else {
-            //LOGI("sono nell'else di notified");
-            //CHECKED_CAMERA_METHOD(cameraDevice->stopRecording());
-            //LOGI("Ho smesso di recordare.");
             LOGI("Can't record now.");
             return -1;
         }
@@ -389,7 +384,6 @@ namespace
     }
         JNIEXPORT jint JNICALL
         Java_com_pmdtec_sample_NativeCamera_stopRegistration(JNIEnv *env, jclass type) {
-            //notified = true;
             if (!notified) {
                 LOGI("La variabile notified vale: %d", notified);
                 CHECKED_CAMERA_METHOD (cameraDevice->stopRecording());
