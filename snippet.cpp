@@ -34,57 +34,80 @@
 
 using namespace std;
 
-int main(argc, argv**)
+int main()
 {
-	fstream file;
-	string line;
-	int count, conta_spazi;
-	std::vector<float,8> sostituire;
+	//std::fstream file;
 
-	file = fopen("input.txt","w+");
+	std::cout << "Creating file" << std::endl;
 
-	if(!file)
+	//FILE* file;
+	std::fstream file("input.txt");
+
+	std::cout << "File created" << std::endl;
+
+	//file = fopen("input.txt", "w");
+
+	if (!file)
 	{
-		cout << "Error opening file" >> endl;
-		return;
+		std::cout << "An error occured opening the file." << std::endl;
+		return -1;
 	}
-	
-	//Come scorrere le righe di un file 
-	while(getline(file, line))
-		count++;
 
-	//Scorro le prime 10 righe
-	//Dopo quelle inizio a controllare gli spazi
-
-	for(/*le righe del file*/)
+	else
 	{
-		if(/*sono nelle prime 10 righe*/)
+		std::string stringa;
+		int row_count = 0;
+		int space_count_global = 0;
+		int space_count_string = 0;
+		int mod; 
+		std::array<float, 4> testArray{{2.03873,-3.973289,1,10}};
+
+		std::cout << "File opened" << std::endl;
+
+		while(std::getline(file,stringa))
 		{
-			//Vado avanti
-		}
-		else
-		{
-			if(/*Il carattere in cui sono è uno spazio*/)
+			//std::cout << "sono nel while!" << std::endl << std::endl;
+			if(row_count<10)
 			{
-				conta_spazi++;
-				if(conta_spazi == 2)
+				std::cout << "sto leggendo la righa: " << row_count << " = " << stringa << std::endl;
+			}
+			else
+			{
+				for (int i=0; i<=stringa.length(); i++)
 				{
-					/* Inizio a sostituire con i caratteri nel vettore "sostituire" */
-					if(/*ho finito di scrivere*/)
+
+					if (space_count_global == 2)
 					{
-						if(/*Ci sono ancora cose dopo*/)
+						std::cout << "Ho trovato entrambi gli spazi, sovrascrivo la riga numero: " << row_count << " = " << stringa << std::endl;
+						mod = (row_count - 10)%4;
+						stringa[i] = testArray[mod];
+						std::cout << "Dovrei aver sovrascritto la stringa: " << stringa << std::endl << std::endl;
+						space_count_global = 0;
+					}
+
+					if(isspace(stringa[i]))
+					{	
+						std::cout << "Ho trovato uno spazio nella riga: " << row_count << " = " << stringa << std::endl;
+						space_count_string++;
+						if(space_count_string < 3 )
 						{
-							/*Cancello tutto ciò che viene fino a che non incontro un a capo*/
-						}
-						else
-						{
-							/*Metto la fine della riga e vado a capo*/
-						}
+							std::cout << "Incremento il contatore di spazi globale della stringa numero: " << row_count << std::endl;
+							space_count_global++;
+						}	
 					}
 				}
+				//std::cout << "sono nell'else e riga: " << stringa << '\n';				
+				space_count_string = 0;	
 			}
+			row_count++;
 		}
-	}
+	}		
+		
 
-	fclose(&file);
+	file.close();
+	//fclose(file);
+
+	std::cout << "File closed" << std::endl;
+
+	return 0;
 }
