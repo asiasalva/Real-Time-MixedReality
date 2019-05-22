@@ -22,8 +22,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
+import com.pmdtec.sample.FrameBuffer;
+
+import org.opencv.core.Mat;
 
 import wseemann.media.FFmpegMediaMetadataRetriever;
+
+import static java.lang.Math.abs;
+import static java.lang.Math.pow;
 
 public class SampleActivity extends Activity {
 
@@ -31,7 +37,10 @@ public class SampleActivity extends Activity {
     //private static int click_count_camera = 0;
     private static int starting_clicks = 0;
     private static int click_count_registration = 0;
+    public static boolean flagFrames = true;
 
+    public static ArrayList<FB> frames_buffer = new ArrayList<>();
+    public static ArrayList<FB> frames_buffer_pico = new ArrayList<>();
     private static final String TAG = "ApplicationLogCat";
     private static final String ACTION_USB_PERMISSION = "ACTION_ROYALE_USB_PERMISSION";
 
@@ -46,6 +55,9 @@ public class SampleActivity extends Activity {
 
     private int mScaleFactor;
     private int[] mResolution;
+
+    public Calendar c = new GregorianCalendar();
+
 
     private static Uri last_video_path;
 
@@ -91,6 +103,47 @@ public class SampleActivity extends Activity {
         Button btnStartProc = findViewById(R.id.btnStartProc);
         mAmplitudeView = findViewById(R.id.imageViewAmplitude);
 
+
+        Thread picoReg = new Thread(){
+            @Override
+            public void start(){
+                openCamera();
+            }
+            @Override
+            public void run(){
+                Calendar c_c = new GregorianCalendar();
+                int minute = c_c.get(Calendar.MINUTE);
+                int seconds = c_c.get(Calendar.SECOND);
+                int milliseconds = c_c.get(Calendar.MILLISECOND);
+                String min_after = Integer.toString(minute);
+                String sec_after = Integer.toString(seconds);
+                String ms_after = Integer.toString(milliseconds);
+                Log.d(TAG, "Before pico start in thread: min: "+min_after+" sec: "+sec_after+" millis: "+ms_after);
+                startRecordRRF();
+            }
+        };
+        Thread camReg = new Thread(){
+            @Override
+            public void start(){
+                FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                transaction.replace(R.id.cameraView, camera2video);
+                transaction.addToBackStack(null);
+                transaction.commit();
+            }
+            @Override
+            public void run(){
+                Calendar c_c = new GregorianCalendar();
+                int minute = c_c.get(Calendar.MINUTE);
+                int seconds = c_c.get(Calendar.SECOND);
+                int milliseconds = c_c.get(Calendar.MILLISECOND);
+                String min_after = Integer.toString(minute);
+                String sec_after = Integer.toString(seconds);
+                String ms_after = Integer.toString(milliseconds);
+                Log.d(TAG, "Before cam2vid start in thread: min: "+min_after+" sec: "+sec_after+" millis: "+ms_after);
+                camera2video.startRecordingVideo();
+            }
+        };
+
         btnStart.setOnClickListener(v -> {
             Log.d(TAG, "btnStart Listener");
 
@@ -99,21 +152,40 @@ public class SampleActivity extends Activity {
                 Log.e(TAG, "Too much start clicks. Camera already Started.");
                 Toast.makeText(getApplicationContext(), "Too much start clicks. Can't start already started cameras.", Toast.LENGTH_LONG).show();
             } else {
-                //Opening Pico
-                openCamera();
-
                 //Opening mobile camera
-                FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                camReg.start();
+                //Opening Pico
+                //openCamera();
+                picoReg.start();
+
+
+                /*FragmentTransaction transaction = getFragmentManager().beginTransaction();
                 transaction.replace(R.id.cameraView, camera2video);
                 transaction.addToBackStack(null);
-                transaction.commit();
+                transaction.commit();*/
             }
 
         });
 
+
         btnStop.setOnClickListener(v -> {
             Log.d(TAG, "btnStop Listener");
-            //Create a logic to stop application or to go ahead in making the reconstruction
+
+            //Temporaneamente
+            flagFrames = false;
+            onDestroy();
+            camera2video.onDestroy();
+
+            workOnFrames();
+            int comparable = FrameBuffer.compareFrames(frames_buffer,frames_buffer_pico);
+
+            if(comparable == 1) //pico buffer < mobile buffer => info saved on pico buffer
+            {
+                createImage(comparable);
+            }
+
+        //Create a logic to stop application or to go ahead in making the reconstruction
+
         });
 
         btnStartRec.setOnClickListener(v -> {
@@ -121,8 +193,9 @@ public class SampleActivity extends Activity {
             click_count_registration++;
             if (!(click_count_registration > 1)) {
                 btnStartRec.setText("StopRec");
-                camera2video.startRecordingVideo();
-                startRecordRRF();
+                picoReg.run();
+                camReg.run();
+                //startRecordRRF();*/
             } else {
                 btnStartRec.setText("StartRec");
                 click_count_registration--;
@@ -139,6 +212,90 @@ public class SampleActivity extends Activity {
             //Process the RRF file in a PLY file foreach frame
             processRRF();
         });
+    }
+
+    private void createImage(int comparable) {
+        //0 mobile, 1 pico
+
+        for(int i=0; i<frames_buffer_pico.size();i++){
+            //frames_buffer_pico.get(i).bitmap.compress(COSE);
+            //frames_buffer_pico.get(i).linked.bitmap.compress(COSE);
+            //Dove le salvo ste cose ?
+        }
+    }
+
+    private void workOnFrames() {
+
+        FrameBuffer.compareFrames(frames_buffer,frames_buffer_pico);
+        //Create a logic to stop application or to go ahead in making the reconstruction
+
+        //I wanna see timestamps
+        //Faccio una media
+
+        int sub_value;
+        int sum = 0;
+        float average_mobile;
+        float average_pico;
+        for(int i=0; i<frames_buffer.size();i++){
+            //Log.d(TAG,"Timestamp per mobCam l'el : "+i+" e' pari a: "+frames_buffer.get(i).timestamp);
+            if( i+1 != frames_buffer.size()) {
+                sub_value = abs(frames_buffer.get(i).timestamp) - abs(frames_buffer.get(i+1).timestamp);
+                sum = sum + sub_value;
+                //Log.d(TAG, "sum mob: " + sum);
+
+            }
+        }
+        average_mobile = sum / (float)(frames_buffer.size());
+        Log.d(TAG, "average mob: " + average_mobile);
+        //chooseBestAverage(average_mobile,0);
+
+        sub_value = 0;
+        sum = 0;
+        for(int i=0; i<frames_buffer_pico.size();i++){
+            //Log.d(TAG,"Timestamp per picoCam l'el : "+i+" e' pari a: "+frames_buffer_pico.get(i).timestamp);
+            if( i+1 != frames_buffer_pico.size()) {
+                sub_value = abs(frames_buffer_pico.get(i).timestamp) - abs(frames_buffer_pico.get(i+1).timestamp);
+                sum = sum + sub_value;
+                //Log.d(TAG, "sum pico: " + sum);
+            }
+        }
+        average_pico = sum / (float)(frames_buffer_pico.size());
+        Log.d(TAG, "average mob: " + average_pico);
+
+        double dev_mobile = calculateStandardDeviation(average_mobile,0);
+        double dev_pico = calculateStandardDeviation(average_pico,1);
+        Log.d(TAG, "standard deviations: MOB: " + dev_mobile + " PICO: "+dev_pico);
+    }
+
+    private double calculateStandardDeviation(float average, int mode) {
+
+        double dev = 0;
+        double sub;
+        double sum = 0;
+        double pow;
+
+        //mode: 0=mobile, 1=pico
+        if(mode == 0)
+        {
+            for(int i=0; i<frames_buffer.size();i++)
+            {
+                sub = (float)frames_buffer.get(i).timestamp - average;
+                pow = Math.pow(sub,2);
+                sum = sum + pow;
+                dev = Math.sqrt(sum / (frames_buffer.size()));
+            }
+        }
+        else
+        {
+            for(int i=0; i<frames_buffer_pico.size();i++)
+            {
+                sub = (float)frames_buffer_pico.get(i).timestamp - average;
+                pow = Math.pow(sub,2);
+                sum = sum + pow;
+                dev = Math.sqrt(sum / (frames_buffer_pico.size()));
+            }
+        }
+        return dev;
     }
 
     private void processRRF() {
@@ -218,8 +375,17 @@ public class SampleActivity extends Activity {
         if ((NativeCamera.stopRegistration()) < 1) {
             Log.e(TAG, "Something went wrong with stop recording.");
         } else {
+            Calendar c_after = new GregorianCalendar();
+            int minute_after = c_after.get(Calendar.MINUTE);
+            int seconds_after = c_after.get(Calendar.SECOND);
+            int milliseconds_after = c_after.get(Calendar.MILLISECOND);
+            String min_after = Integer.toString(minute_after);
+            String sec_after = Integer.toString(seconds_after);
+            String ms_after = Integer.toString(milliseconds_after);
+            Log.d(TAG, "In pico after recording: min: "+min_after+" sec: "+sec_after+" millis: "+ms_after);
             Toast.makeText(getApplicationContext(), "File correctly saved", Toast.LENGTH_SHORT).show();
         }
+
     }
 
     /*
@@ -238,6 +404,14 @@ public class SampleActivity extends Activity {
         int array[] = {0, 0, 0, 0};
         int argc = 2;
         NativeCamera.semaphoreNotify(true);
+        Calendar c = new GregorianCalendar();
+        int minute = c.get(Calendar.MINUTE);
+        int seconds = c.get(Calendar.SECOND);
+        int milliseconds = c.get(Calendar.MILLISECOND);
+        String min = Integer.toString(minute);
+        String sec = Integer.toString(seconds);
+        String ms = Integer.toString(milliseconds);
+        Log.d(TAG, "In pico before starting record: min: "+min+" sec: "+sec+" millis: "+ms);
         if ((NativeCamera.recordRRF(argc, file, array)) < 1) {
             Log.e(TAG, "Something went wrong with recording");
         }
@@ -256,6 +430,10 @@ public class SampleActivity extends Activity {
         runOnUiThread(() -> mAmplitudeView.setImageBitmap(Bitmap.createScaledBitmap(mBitmap,
                 mResolution[0] * mScaleFactor,
                 mResolution[1] * mScaleFactor, false)));
+        FB element = new FB(mBitmap, (int)System.nanoTime());
+        frames_buffer_pico.add(element);
+
+        Log.d(TAG,"Sto catturando i frames di pico");
     }
 
     /*
@@ -322,6 +500,14 @@ public class SampleActivity extends Activity {
 
     private void createBitmap() {
         // calculate scale factor, which scales the bitmap relative to the display mResolution
+        int minute = c.get(Calendar.MINUTE);
+        int seconds = c.get(Calendar.SECOND);
+        int milliseconds = c.get(Calendar.MILLISECOND);
+        String min = Integer.toString(minute);
+        String sec = Integer.toString(seconds);
+        String ms = Integer.toString(milliseconds);
+        Log.d(TAG, "In Pico bitmap: min: "+min+" sec: "+sec+" millis: "+ms);
+
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
@@ -330,6 +516,9 @@ public class SampleActivity extends Activity {
 
         if (mBitmap == null) {
             mBitmap = Bitmap.createBitmap(mResolution[0], mResolution[1], Bitmap.Config.ARGB_8888);
+            //frames_buffer_pico.add(mBitmap);
+            //Log.d(TAG,"sto catturando i bitmap di pico"+frames_buffer_pico.toString());
+
         }
     }
 

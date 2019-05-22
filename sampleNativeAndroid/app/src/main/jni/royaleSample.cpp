@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
+#include <math.h>
 
 #define TAG "com.pmdtec.jroyale.jni"
 
@@ -169,6 +170,9 @@ namespace
             // https://en.wikipedia.org/wiki/PLY_(file_format)
             std::ofstream outputFile;
             std::stringstream stringStream;
+            //std::vector xvector;
+            //std::vector yvector;
+            //std::vector zvector;
 
             outputFile.open ("/storage/emulated/0/Android/data/com.pmdtec.sample56/files/"+filename, std::ofstream::out | std::ofstream::app );
 
@@ -197,14 +201,43 @@ namespace
                 for (size_t i = 0; i < data->points.size(); ++i)
                 {
                     stringStream << data->points.at (i).x << " " << data->points.at (i).y << " " << data->points.at (i).z << std::endl;
+                    //zvector[i] = data->points.at (i).z;
                 }
 
                 // output stringstream to file and close it
                 outputFile << stringStream.str();
+
+                //Now convert scalar to RGB colormap foreach frame
+                //createColorMap(filename, zvector);
                 outputFile.flush();
                 outputFile.close();
             }
         }
+
+        /*void createColorMap(std::string filename, std::vector zvector)
+        {
+            LOGI("Sono nella ColorMapFunction");
+            LOGI("Filename: %s", filename);
+
+
+
+            auto a=(1-f)/0.25;	//invert and group
+            auto X=Math.floor(a);	//this is the integer part
+            auto Y=Math.floor(255*(a-X)); //fractional part from 0 to 255
+            switch(X)
+            {
+                case 0: r=255;g=Y;b=0;break;
+                case 1: r=255-Y;g=255;b=0;break;
+                case 2: r=0;g=255;b=Y;break;
+                case 3: r=0;g=255-Y;b=255;break;
+                case 4: r=0;g=0;b=255;break;
+            }
+            ctx.fillStyle = "rgb("+r+","+g+","+b+")";
+            ctx.fillRect(i,30,1,20);
+
+            fclose(colorFile);
+
+        }*/
 
         void onNewData (const royale::DepthData *data)
         {
@@ -350,7 +383,12 @@ namespace
             return jintArray ();
         }
 
-        // IMPORTANT: call the initialize method before working with the camera device
+        // IMPORTANT: call the initialize method before working with the camera device;
+        //royale::CallbackData Depth;
+        //royale::CallbackData Raw;
+        //cameraDevice->setCallbackData(Raw);
+        //cameraDevice->setCallbackData(0x002);
+        //royale::IDepthDataListener
         auto ret = cameraDevice->initialize ();
         if (ret != royale::CameraStatus::SUCCESS)
         {
@@ -360,6 +398,10 @@ namespace
         royale::Vector<royale::String> opModes;
         royale::String cameraName;
         royale::String cameraId;
+        royale::Vector<std::uint8_t> calibrationData;
+
+        ret = cameraDevice->getCalibrationData(calibrationData);
+        LOGE("calibration data: %d", (int)ret);
 
         ret = cameraDevice->getUseCases (opModes);
         if (ret != royale::CameraStatus::SUCCESS)
@@ -406,6 +448,7 @@ namespace
             LOGI ("    %s", opModes.at (i).c_str ());
         }
 
+
         // register a data listener
         ret = cameraDevice->registerDataListener (&listener);
         if (ret != royale::CameraStatus::SUCCESS)
@@ -420,7 +463,7 @@ namespace
             LOGI ("Failed to set use case, CODE %d", (int) ret);
         }
 
-        ret = cameraDevice->startCapture ();
+        ret = cameraDevice->startCapture();
         if (ret != royale::CameraStatus::SUCCESS)
         {
             LOGI ("Failed to start capture, CODE %d", (int) ret);
@@ -481,7 +524,7 @@ namespace
         LOGI ("Ho creato le variabili nella funzione jni: %s %d %d %d e notified: %d", file, numberOfFrames, framesToSkip, msToSkip, notified);
         if(notified) {
             LOGI ("Prima di registrare");
-            CHECKED_CAMERA_METHOD (cameraDevice->startRecording(file));
+            CHECKED_CAMERA_METHOD (cameraDevice->startRecording(file,0x02));
             LOGI ("Sono dopo la registrazione ma nell'if");
             return 1;
         } else {
