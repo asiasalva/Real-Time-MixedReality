@@ -35,6 +35,7 @@ public class SampleActivity extends Activity {
     private static final String TAG = "ApplicationLogCat";
     private static final String ACTION_USB_PERMISSION = "ACTION_ROYALE_USB_PERMISSION";
 
+    private static String  file;
     private UsbManager mUSBManager;
     private UsbDeviceConnection mUSBConnection;
 
@@ -134,7 +135,24 @@ public class SampleActivity extends Activity {
             Log.d(TAG, "btnStartProc Listener");
             //Start Processing mobile camera video
             startProcessing();
+
+            //Process the RRF file in a PLY file foreach frame
+            processRRF();
         });
+    }
+
+    private void processRRF() {
+        Log.d(TAG, "Starting PLY conversion");
+        File dir = getExternalFilesDir(null);
+        NativeCamera.semaphoreNotify(true);
+        if ((NativeCamera.convertToPLY(file)) != 0) {
+            Log.e(TAG, "Something went wrong with conversion");
+        }
+        else
+        {
+            Toast.makeText(getApplicationContext(), "Files PLY correctly saved", Toast.LENGTH_SHORT).show();
+        }
+
     }
 
     private void startProcessing() {
@@ -216,13 +234,12 @@ public class SampleActivity extends Activity {
         Log.d(TAG, "Start RRF registration");
         File directory = getExternalFilesDir(null);
         File f = new File(directory, "file.rrf" + System.currentTimeMillis());
-        String file = new String(directory.getAbsolutePath() + "/file" + System.currentTimeMillis() + ".rrf");
+        file = new String(directory.getAbsolutePath() + "/file" + System.currentTimeMillis() + ".rrf");
         int array[] = {0, 0, 0, 0};
         int argc = 2;
-        Log.d(TAG, "ho creato gli argomenti");
         NativeCamera.semaphoreNotify(true);
         if ((NativeCamera.recordRRF(argc, file, array)) < 1) {
-            Log.e(TAG, "something went wrong with recording");
+            Log.e(TAG, "Something went wrong with recording");
         }
     }
 

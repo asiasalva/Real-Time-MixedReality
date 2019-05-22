@@ -37,4 +37,6 @@ public final class NativeCamera
     public static native int stopRegistration();
 
     public static native void semaphoreNotify(boolean notify);
+
+    public static native int convertToPLY(String file_name);
 }

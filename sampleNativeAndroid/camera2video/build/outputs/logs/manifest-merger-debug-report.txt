@@ -1,31 +1,31 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
+ADDED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
 	package
-		ADDED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:18:5-47
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		ADDED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:18:5-47
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
 	android:versionName
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-		ADDED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		ADDED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:1-41:12
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
 	xmlns:android
-		ADDED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:11-69
+		ADDED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml:17:11-69
 uses-sdk
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
 	android:targetSdkVersion
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-		ADDED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		ADDED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-		ADDED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
-		INJECTED from C:\Users\asalvaterra\Documents\Utility\M\libroyale-3.21.1.70-ANDROID-arm-64Bit\samples\android\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		ADDED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\asalvaterra\Documents\Internship\Internship\sampleNativeAndroid\camera2video\src\main\AndroidManifest.xml
