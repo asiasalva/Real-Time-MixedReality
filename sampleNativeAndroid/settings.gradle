@@ -1,1 +1,1 @@
-include ':app', ':camerakit', ':camera2video'
+include ':app', ':camerakit', ':camera2video', ':openCv'

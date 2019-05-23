@@ -10,9 +10,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -20,6 +22,7 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
 import android.os.Bundle;
@@ -44,8 +47,10 @@ import com.example.android.camera2video.AutoFitTextureView;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -124,6 +129,13 @@ public class Camera2Video extends Fragment
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+            if(SampleActivity.flagFrames) {
+                Log.e(TAG, "Sto catturando i frames della telecameras");
+                Bitmap frame = Bitmap.createBitmap(mTextureView.getWidth(), mTextureView.getHeight(), Bitmap.Config.ARGB_8888);
+                FB element = new FB(frame, (int) System.nanoTime());
+                SampleActivity.frames_buffer.add(element);
+                //Log.d(TAG, "sto catturando i frames che cambiano: " + SampleActivity.frames_buffer.toString());
+            }
         }
 
     };
@@ -166,6 +178,7 @@ public class Camera2Video extends Fragment
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its status.
      */
+
     private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
 
         @Override
@@ -393,6 +406,7 @@ public class Camera2Video extends Fragment
         Log.d(TAG, "Open camera");
         Log.d(TAG, "Width: " + width);
         Log.d(TAG, "Height: " + height);
+
         if (!hasPermissionsGranted(VIDEO_PERMISSIONS)) {
             requestVideoPermissions();
             return;
@@ -429,6 +443,16 @@ public class Camera2Video extends Fragment
             }
             configureTransform(width, height);
             mMediaRecorder = new MediaRecorder();
+
+            Calendar c = new GregorianCalendar();
+            int minute = c.get(Calendar.MINUTE);
+            int seconds = c.get(Calendar.SECOND);
+            int milliseconds = c.get(Calendar.MILLISECOND);
+            String min = Integer.toString(minute);
+            String sec = Integer.toString(seconds);
+            String ms = Integer.toString(milliseconds);
+            Log.d(TAG, "In Camera2video visualization: min: "+min+" sec: "+sec+" millis: "+ms);
+
             manager.openCamera(cameraId, mStateCallback, null);
         } catch (CameraAccessException e) {
             Toast.makeText(activity, "Cannot access the camera.", Toast.LENGTH_SHORT).show();
@@ -616,6 +640,7 @@ public class Camera2Video extends Fragment
             surfaces.add(recorderSurface);
             mPreviewBuilder.addTarget(recorderSurface);
 
+
             // Start a capture session
             // Once the session starts, we can update the UI and start recording
             mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
@@ -631,6 +656,16 @@ public class Camera2Video extends Fragment
                             // UI
                             mIsRecordingVideo = true;
                             // Start recording
+
+                            Calendar c = new GregorianCalendar();
+                            int minute = c.get(Calendar.MINUTE);
+                            int seconds = c.get(Calendar.SECOND);
+                            int milliseconds = c.get(Calendar.MILLISECOND);
+                            String min = Integer.toString(minute);
+                            String sec = Integer.toString(seconds);
+                            String ms = Integer.toString(milliseconds);
+                            Log.d(TAG, "In Camera2video start recording: min: "+min+" sec: "+sec+" millis: "+ms);
+
                             mMediaRecorder.start();
                         }
                     });
@@ -663,6 +698,16 @@ public class Camera2Video extends Fragment
         mIsRecordingVideo = false;
         // Stop recording
         mMediaRecorder.stop();
+
+        Calendar c_after = new GregorianCalendar();
+        int minute_after = c_after.get(Calendar.MINUTE);
+        int seconds_after = c_after.get(Calendar.SECOND);
+        int milliseconds_after = c_after.get(Calendar.MILLISECOND);
+        String min_after = Integer.toString(minute_after);
+        String sec_after = Integer.toString(seconds_after);
+        String ms_after = Integer.toString(milliseconds_after);
+        Log.d(TAG, "In camera after recording: min: "+min_after+" sec: "+sec_after+" millis: "+ms_after);
+
         mMediaRecorder.reset();
 
         Activity activity = getActivity();
