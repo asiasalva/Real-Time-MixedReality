@@ -11,9 +11,12 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -63,6 +66,7 @@ public class Camera2Video extends Fragment
     private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
     private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
 
+    private Bitmap mBitmap;
     private static final String TAG = "ApplicationLogCat";
     private static final int REQUEST_VIDEO_PERMISSIONS = 1;
     private static final String FRAGMENT_DIALOG = "dialog";
@@ -130,15 +134,31 @@ public class Camera2Video extends Fragment
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
             if(SampleActivity.flagFrames) {
-                Log.e(TAG, "Sto catturando i frames della telecameras");
-                Bitmap frame = Bitmap.createBitmap(mTextureView.getWidth(), mTextureView.getHeight(), Bitmap.Config.ARGB_8888);
-                FB element = new FB(frame, (int) System.nanoTime());
+                //Log.e(TAG, "Sto catturando i frames della telecamera");
+                Bitmap frame = mTextureView.getBitmap();
+                        //operaBitmap();
+
+                Log.d(TAG,"frame : "+frame.getByteCount());
+                FB element = new FB(frame, (int) System.currentTimeMillis());
                 SampleActivity.frames_buffer.add(element);
                 //Log.d(TAG, "sto catturando i frames che cambiano: " + SampleActivity.frames_buffer.toString());
             }
         }
 
     };
+
+    private Bitmap operaBitmap() {
+        Bitmap bitmap = Bitmap.createBitmap(mTextureView.getWidth(), mTextureView.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Drawable bgDrawable = mTextureView.getBackground();
+        if (bgDrawable != null) {
+            bgDrawable.draw(canvas);
+        } else {
+            canvas.drawColor(Color.WHITE);
+        }
+        mTextureView.draw(canvas);
+        return bitmap;
+    }
 
     /**
      * The {@link android.util.Size} of camera preview.

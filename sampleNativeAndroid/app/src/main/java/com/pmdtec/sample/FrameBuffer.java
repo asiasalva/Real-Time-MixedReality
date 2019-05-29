@@ -15,10 +15,12 @@ public class FrameBuffer{
 
     private static final String TAG = "ApplicationLogCat";
 
+
     ArrayList<FB> frames_buffer = new ArrayList<>();
 
     FrameBuffer(){
         new FrameBuffer();
+
     }
 
     public void add(Bitmap bitmap, int timestamp){
@@ -28,18 +30,24 @@ public class FrameBuffer{
 
     public static int compareFrames(ArrayList<FB> mobile_buffer, ArrayList<FB> pico_buffer){
 
-        Log.d(TAG,"sono nella funzione in timing");
+        Log.d(TAG,"sono nel metodo compareFrames");
         Log.e(TAG,"mobile_buffer size :" +mobile_buffer.size());
         Log.e(TAG, "pico buffer size: "+pico_buffer.size());
 
         int ret_value;
 
-        int link_position;
+        int link_position = 0;
+
         if( pico_buffer.size() <= mobile_buffer.size())
         {
-            for(int i=0; i<pico_buffer.size(); i++){
+            //Log.d(TAG,"il buffer di Pico e' minore");
+            for(int i=0; i<pico_buffer.size(); i++)
+            {
                 link_position = findNearest(pico_buffer.get(i),mobile_buffer);
-                pico_buffer.get(i).linked = mobile_buffer.get(link_position);
+                //Log.d(TAG,"linked position nel for: "+link_position);
+                if(! (link_position == -1)){
+                    pico_buffer.get(i).addLinked(mobile_buffer.get(link_position));
+                }
             }
             ret_value = 1; //pico buffer < mobile buffer
         }
@@ -47,38 +55,67 @@ public class FrameBuffer{
         {
             for(int i=0; i<mobile_buffer.size(); i++){
                 link_position = findNearest(mobile_buffer.get(i),pico_buffer);
-                mobile_buffer.get(i).linked = pico_buffer.get(link_position);
+                mobile_buffer.get(i).addLinked(pico_buffer.get(link_position));
             }
             ret_value = 0;
         }
+
         return ret_value;
     }
 
-    private static int findNearest(FB fb, ArrayList<FB> mobile_buffer) {
+    private static int findNearest(FB fb, ArrayList<FB> buffer) {
+
+        Log.d(TAG,"Find nearest");
+
         int timestamp = fb.timestamp;
-        int linked_position = NULL;
-        double delta;
-        double delta_succ;
-        for(int i=0; i<mobile_buffer.size(); i++){
-            delta = abs(mobile_buffer.get(i).timestamp) - abs(timestamp);
-            delta_succ = abs(mobile_buffer.get(i+1).timestamp) - abs(timestamp);
-            if( abs(delta) <= abs(delta_succ))
+        //Log.d(TAG,"timestamp = "+timestamp);
+
+        int linked_position = -1;
+
+        double delta = 0;
+        double delta_succ = 0;
+        int size = buffer.size();
+
+        //Log.d(TAG,"buffer size: "+size);
+        delta = buffer.get(0).timestamp - timestamp ;
+        //Log.d(TAG,"delta del buffer in pos 0: " +delta);
+
+
+        for(int i=1; i<=size-1; i++)
+        {
+            //Log.d(TAG, "delta = " + delta);
+            delta_succ = buffer.get(i).timestamp - timestamp;
+            if (abs(delta) <= abs(delta_succ))
             {
-                 linked_position=i;
+                Log.d(TAG,"ho trovato la mia i");
+                linked_position = i-1;
+                break;
+            }
+            else
+            {
+                delta = delta_succ;
             }
         }
+
+        //Log.d(TAG,"linked position = "+linked_position);
         return linked_position;
     }
 
 }
 
 class FB {
+
     Bitmap bitmap;
     int timestamp;
     FB linked;
 
     FB(Bitmap bitmap, int timestamp){
+
         this.bitmap = bitmap;
         this.timestamp = timestamp;
+    }
+
+    public void addLinked(FB linked){
+        this.linked = linked;
     }
 }
