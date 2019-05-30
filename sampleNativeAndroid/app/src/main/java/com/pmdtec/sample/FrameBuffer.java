@@ -5,8 +5,29 @@ package com.pmdtec.sample;
 import android.graphics.Bitmap;
 import android.util.Log;
 
+import android.app.*;
+import android.content.*;
+import android.graphics.*;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.hardware.usb.*;
+import android.media.MediaPlayer;
+import android.net.Uri;
+import android.os.*;
+import android.util.*;
+import android.view.*;
+import android.widget.*;
+import android.media.MediaMetadataRetriever;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Random;
+import java.io.FileOutputStream;
 
 import static java.lang.Math.abs;
 import static java.sql.Types.NULL;

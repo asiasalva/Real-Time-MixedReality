@@ -17,6 +17,8 @@ import android.media.MediaMetadataRetriever;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 
@@ -144,6 +146,7 @@ public class SampleActivity extends Activity {
             onDestroy();
             camera2video.onDestroy();
 
+            saveBuffersInfo();
             workOnFrames();
 
             //Create a logic to stop application
@@ -174,6 +177,41 @@ public class SampleActivity extends Activity {
             //Process the RRF file in a PLY file foreach frame
             processRRF();
         });
+    }
+
+    private void saveBuffersInfo() {
+        String folder = getExternalFilesDir(null) + "/data";
+        File saveFolder = new File(folder);
+        if (!saveFolder.exists()) {
+            saveFolder.mkdirs();
+        }
+        String fileName = "infoMobile.txt";
+        String absolutePath = folder + File.separator + fileName;
+
+        String el_toWrite;
+
+        try(FileWriter fileWriter = new FileWriter(absolutePath)) {
+            for (FB fb_mobile : frames_buffer) {
+                el_toWrite = Integer.toString(fb_mobile.timestamp)+'\n';
+                fileWriter.write(el_toWrite);
+            }
+        }catch (IOException e) {
+            Log.e(TAG,"Error Mobile: "+e.toString());
+        }
+
+        String fileNamePico = "infoPico.txt";
+        String absolutePathPico = folder + File.separator + fileNamePico;
+
+        String el_toWritePico;
+
+        try(FileWriter fileWriter = new FileWriter(absolutePathPico)) {
+            for (FB fb_pico : frames_buffer_pico) {
+                el_toWritePico = Integer.toString(fb_pico.timestamp)+'\n';
+                fileWriter.write(el_toWritePico);
+            }
+        }catch (IOException e) {
+            Log.e(TAG,"Error Pico: "+e.toString());
+        }
     }
 
     private void createImage(int comparable) {
@@ -269,7 +307,7 @@ public class SampleActivity extends Activity {
 
         Log.d(TAG, "Sample Activity.workOnFrames");
         int comparable = FrameBuffer.compareFrames(frames_buffer,frames_buffer_pico);
-
+        saveLinkedInfo();
         //Faccio una media
         int sub_value;
         int sum = 0;
@@ -296,6 +334,29 @@ public class SampleActivity extends Activity {
         createImage(comparable);
 
         Toast.makeText(getApplicationContext(), "Images saved.", Toast.LENGTH_LONG).show();
+    }
+
+    private void saveLinkedInfo() {
+        String folder = getExternalFilesDir(null) + "/data";
+        File saveFolder = new File(folder);
+        if (!saveFolder.exists()) {
+            saveFolder.mkdirs();
+        }
+        String fileName = "infoLinking.txt";
+        String absolutePath = folder + File.separator + fileName;
+
+        String el_toWrite;
+
+        try(FileWriter fileWriter = new FileWriter(absolutePath)) {
+            el_toWrite = "Pico                                Mobile"+'\n';
+            for (FB fb : frames_buffer_pico)
+            {
+                el_toWrite =Integer.toString(fb.timestamp)+" "+Integer.toString(fb.linked.timestamp)+'\n';
+                fileWriter.write(el_toWrite);
+            }
+        }catch (IOException e) {
+            Log.e(TAG,"Error Mobile: "+e.toString());
+        }
     }
 
     private double calculateStandardDeviation(float average, int mode) {
