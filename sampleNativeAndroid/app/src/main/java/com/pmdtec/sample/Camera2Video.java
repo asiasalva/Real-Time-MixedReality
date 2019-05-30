@@ -17,7 +17,6 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.Drawable;
-import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -25,7 +24,6 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
 import android.os.Bundle;
@@ -42,11 +40,8 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.Toast;
-
 import com.example.android.camera2video.AutoFitTextureView;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -133,20 +128,21 @@ public class Camera2Video extends Fragment
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
-            if(SampleActivity.flagFrames) {
-                //Log.e(TAG, "Sto catturando i frames della telecamera");
+            if (SampleActivity.flagFrames) {
                 Bitmap frame = mTextureView.getBitmap();
-                        //operaBitmap();
-
-                Log.d(TAG,"frame : "+frame.getByteCount());
                 FB element = new FB(frame, (int) System.currentTimeMillis());
                 SampleActivity.frames_buffer.add(element);
-                //Log.d(TAG, "sto catturando i frames che cambiano: " + SampleActivity.frames_buffer.toString());
             }
         }
 
     };
 
+    /**
+     * Function I don't need right now.
+     * But if I would ever like to change the way I create Bitmap in the above function, this one could be useful.
+     *
+     * @return the created and modified bitmap
+     */
     private Bitmap operaBitmap() {
         Bitmap bitmap = Bitmap.createBitmap(mTextureView.getWidth(), mTextureView.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -471,7 +467,7 @@ public class Camera2Video extends Fragment
             String min = Integer.toString(minute);
             String sec = Integer.toString(seconds);
             String ms = Integer.toString(milliseconds);
-            Log.d(TAG, "In Camera2video visualization: min: "+min+" sec: "+sec+" millis: "+ms);
+            Log.d(TAG, "In Camera2video visualization: min: " + min + " sec: " + sec + " millis: " + ms);
 
             manager.openCamera(cameraId, mStateCallback, null);
         } catch (CameraAccessException e) {
@@ -684,7 +680,7 @@ public class Camera2Video extends Fragment
                             String min = Integer.toString(minute);
                             String sec = Integer.toString(seconds);
                             String ms = Integer.toString(milliseconds);
-                            Log.d(TAG, "In Camera2video start recording: min: "+min+" sec: "+sec+" millis: "+ms);
+                            Log.d(TAG, "In Camera2video start recording: min: " + min + " sec: " + sec + " millis: " + ms);
 
                             mMediaRecorder.start();
                         }
@@ -726,7 +722,7 @@ public class Camera2Video extends Fragment
         String min_after = Integer.toString(minute_after);
         String sec_after = Integer.toString(seconds_after);
         String ms_after = Integer.toString(milliseconds_after);
-        Log.d(TAG, "In camera after recording: min: "+min_after+" sec: "+sec_after+" millis: "+ms_after);
+        Log.d(TAG, "In camera after recording: min: " + min_after + " sec: " + sec_after + " millis: " + ms_after);
 
         mMediaRecorder.reset();
 

@@ -1,121 +1,108 @@
 package com.pmdtec.sample;
 
-//import android.graphics.Bitmap;
-
 import android.graphics.Bitmap;
 import android.util.Log;
-
 import java.util.ArrayList;
-import java.util.Iterator;
-
 import static java.lang.Math.abs;
-import static java.sql.Types.NULL;
 
-public class FrameBuffer{
+public class FrameBuffer {
 
     private static final String TAG = "ApplicationLogCat";
+    private ArrayList<FB> frames_buffer = new ArrayList<>();
 
-
-     private ArrayList<FB> frames_buffer = new ArrayList<>();
-
-    private FrameBuffer(){
+    private FrameBuffer() {
         new FrameBuffer();
-
     }
 
-    public void add(Bitmap bitmap, int timestamp){
-        FB element = new FB(bitmap,timestamp);
+    public void add(Bitmap bitmap, int timestamp) {
+        FB element = new FB(bitmap, timestamp);
         frames_buffer.add(element);
     }
 
-    public static int compareFrames(ArrayList<FB> mobile_buffer, ArrayList<FB> pico_buffer){
+    /**
+     * First, choose the shortest buffer: this is the one we need to find the corresponding frame for each bitmap.
+     * @param mobile_buffer : buffer of the mobile camera data
+     * @param pico_buffer : buffer of the pico camera data
+     * @return :  which is the shortest buffer
+     */
+    public static int compareFrames(ArrayList<FB> mobile_buffer, ArrayList<FB> pico_buffer) {
 
-        Log.d(TAG,"sono nel metodo compareFrames");
-        Log.e(TAG,"mobile_buffer size :" +mobile_buffer.size());
-        Log.e(TAG, "pico buffer size: "+pico_buffer.size());
+        Log.d(TAG, "FrameBuffer.compareFrames");
+        //Log.e(TAG, "mobile_buffer size :" + mobile_buffer.size());
+        //Log.e(TAG, "pico buffer size: " + pico_buffer.size());
 
         int ret_value;
+        int link_position;
 
-        int link_position = 0;
-
-        if( pico_buffer.size() <= mobile_buffer.size())
-        {
-            //Log.d(TAG,"il buffer di Pico e' minore");
-            for(int i=0; i<pico_buffer.size(); i++)
-            {
-                link_position = findNearest(pico_buffer.get(i),mobile_buffer);
-                //Log.d(TAG,"linked position nel for: "+link_position);
-                if(! (link_position == -1)){
+        if (pico_buffer.size() <= mobile_buffer.size()) {
+            for (int i = 0; i < pico_buffer.size(); i++) {
+                link_position = findNearest(pico_buffer.get(i), mobile_buffer);
+                if (!(link_position == -1)) {
                     pico_buffer.get(i).addLinked(mobile_buffer.get(link_position));
                 }
             }
             ret_value = 1; //pico buffer < mobile buffer
-        }
-        else
-        {
-            for(int i=0; i<mobile_buffer.size(); i++){
-                link_position = findNearest(mobile_buffer.get(i),pico_buffer);
+        } else {
+            for (int i = 0; i < mobile_buffer.size(); i++) {
+                link_position = findNearest(mobile_buffer.get(i), pico_buffer);
                 mobile_buffer.get(i).addLinked(pico_buffer.get(link_position));
             }
             ret_value = 0;
         }
-
         return ret_value;
     }
 
+    /**
+     * Given a buffer element it will look for the corresponding element from the other buffer.
+     * @param fb : buffer element to which find the corresponding.
+     * @param buffer : buffer in which perform the search.
+     * @return
+     */
     private static int findNearest(FB fb, ArrayList<FB> buffer) {
 
-        Log.d(TAG,"Find nearest");
-
+        Log.d(TAG, "FramesBuffer.findNearest");
         int timestamp = fb.timestamp;
-        Log.d(TAG,"timestamp = "+timestamp);
 
         int linked_position = -1;
-
-        double delta = 0;
-        double delta_succ = 0;
+        double delta;
+        double delta_succ;
         int size = buffer.size();
 
-        //Log.d(TAG,"buffer size: "+size);
-        delta = buffer.get(0).timestamp - timestamp ;
-        //Log.d(TAG,"delta del buffer in pos 0: " +delta);
+        delta = buffer.get(0).timestamp - timestamp;
 
-
-        for(int i=1; i<=size-1; i++)
-        {
-            //Log.d(TAG, "delta = " + delta);
+        for (int i = 1; i <= size - 1; i++) {
             delta_succ = buffer.get(i).timestamp - timestamp;
-            if (abs(delta) <= abs(delta_succ))
-            {
-                Log.d(TAG,"ho trovato la mia i");
-                linked_position = i-1;
+            if (abs(delta) <= abs(delta_succ)) {
+                linked_position = i - 1;
                 break;
-            }
-            else
-            {
+            } else {
                 delta = delta_succ;
             }
         }
-
-        //Log.d(TAG,"linked position = "+linked_position);
         return linked_position;
     }
-
 }
 
+/**
+ * Class representing a frameBuffer element:
+ * each FB element has a bitmap and a timestamp.
+ * The "linked" FB element is the corresponding frame I find with findNearest function.
+ * Bu default, linked does not exist: it will add only when will be found.
+ */
 class FB {
 
     Bitmap bitmap;
     int timestamp;
     FB linked;
 
-    FB(Bitmap bitmap, int timestamp){
+    FB(Bitmap bitmap, int timestamp) {
 
         this.bitmap = bitmap;
         this.timestamp = timestamp;
+        this.linked = null;
     }
 
-    public void addLinked(FB linked){
+    public void addLinked(FB linked) {
         this.linked = linked;
     }
 }
