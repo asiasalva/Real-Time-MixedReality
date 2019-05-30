@@ -16,9 +16,9 @@ public class FrameBuffer{
     private static final String TAG = "ApplicationLogCat";
 
 
-    ArrayList<FB> frames_buffer = new ArrayList<>();
+     private ArrayList<FB> frames_buffer = new ArrayList<>();
 
-    FrameBuffer(){
+    private FrameBuffer(){
         new FrameBuffer();
 
     }
@@ -68,7 +68,7 @@ public class FrameBuffer{
         Log.d(TAG,"Find nearest");
 
         int timestamp = fb.timestamp;
-        //Log.d(TAG,"timestamp = "+timestamp);
+        Log.d(TAG,"timestamp = "+timestamp);
 
         int linked_position = -1;
 

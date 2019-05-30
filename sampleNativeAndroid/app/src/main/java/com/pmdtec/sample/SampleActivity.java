@@ -130,14 +130,7 @@ public class SampleActivity extends Activity {
                 //Opening mobile camera
                 camReg.start();
                 //Opening Pico
-                //openCamera();
                 picoReg.start();
-
-
-                /*FragmentTransaction transaction = getFragmentManager().beginTransaction();
-                transaction.replace(R.id.cameraView, camera2video);
-                transaction.addToBackStack(null);
-                transaction.commit();*/
             }
 
         });
@@ -196,7 +189,7 @@ public class SampleActivity extends Activity {
             saveFolder.mkdirs();
         }
 
-        int i = 1;
+        int j = 1;
         if( comparable == 0)
         {
             for (FB fb : frames_buffer)
@@ -208,10 +201,8 @@ public class SampleActivity extends Activity {
 
                     fb.linked.bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
 
-                    //canvas.drawBitmap(fb.bitmap, 0, 0, null);
-
-                    File mob_file = new File(saveFolder, ("mobile_frame" + i + ".jpg"));
-                    File pico_file = new File(saveFolder, ("pico_frame" + i + ".jpg"));
+                    File mob_file = new File(saveFolder, ("mobile_frame" +j + ".jpg"));
+                    File pico_file = new File(saveFolder, ("pico_frame" + j + ".jpg"));
                     try {
                         mob_file.createNewFile();
                         pico_file.createNewFile();
@@ -228,30 +219,31 @@ public class SampleActivity extends Activity {
                         e.printStackTrace();
                         Log.e(TAG, "Error: " + e.toString());
                     }
-                    i++;
+                    j++;
                 }
             }
         }
         else
         {
-            Log.d(TAG,"else");
-            for (FB fb : frames_buffer_pico)
+            Log.d(TAG,"Dimensione del buffer di Pico = "+frames_buffer_pico.size());
+
+            for (int i=0; i<frames_buffer_pico.size(); i++)
             {
-                if( ! (fb == null ))
+                if( ! (frames_buffer_pico.get(i) == null ))
                 {
                     ByteArrayOutputStream mobile_bytes = new ByteArrayOutputStream();
                     ByteArrayOutputStream pico_bytes = new ByteArrayOutputStream();
-
-                    fb.bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
-                    fb.linked.bitmap.setHasAlpha(true);
-                    fb.linked.bitmap.compress(Bitmap.CompressFormat.PNG, 10, mobile_bytes);
+                    Log.d(TAG,"Inizio a salvare l'immagine di "+frames_buffer_pico.get(i).timestamp+" e di " + frames_buffer_pico.get(i).linked.timestamp);
+                    frames_buffer_pico.get(i).bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
+                    frames_buffer_pico.get(i).linked.bitmap.setHasAlpha(true);
+                    frames_buffer_pico.get(i).linked.bitmap.compress(Bitmap.CompressFormat.PNG, 10, mobile_bytes);
                     //fb.linked.bitmap.compress(Bitmap.CompressFormat.PNG, 40, mobile_bytes);
-                    Log.d(TAG,"Ho eseguito la compressione dei bitmap");
-                    File mob_file = new File(saveFolder, ("mobile_frame" + i + ".png"));
-                    File pico_file = new File(saveFolder, ("pico_frame" + i + ".jpg"));
+                    //Log.d(TAG,"Ho eseguito la compressione dei bitmap");
+                    File mob_file = new File(saveFolder, ("mobile_frame" + j + ".png"));
+                    File pico_file = new File(saveFolder, ("pico_frame" + j + ".jpg"));
 
                     try {
-                        Log.d(TAG,"try");
+                        //Log.d(TAG,"try");
                         mob_file.createNewFile();
                         pico_file.createNewFile();
                         FileOutputStream mob_fo = new FileOutputStream(mob_file);
@@ -262,13 +254,13 @@ public class SampleActivity extends Activity {
                         pico_fo.flush();
                         mob_fo.close();
                         pico_fo.close();
-                        Log.d(TAG,"Fine try");
+                        //Log.d(TAG,"Fine try");
                     } catch (Exception e) {
                         e.printStackTrace();
                         Log.e(TAG, "Error: " + e.toString());
                     }
-                    Log.d(TAG,"Immagini "+i+" salvate correttamente");
-                    i++;
+                    //Log.d(TAG,"Immagini "+i+" salvate correttamente");
+                    j++;
                 }
             }
         }
@@ -303,7 +295,7 @@ public class SampleActivity extends Activity {
         double dev_pico = calculateStandardDeviation(average_pico,1);
         createImage(comparable);
 
-        //Log.d(TAG,"e ora cosa dovrebbe fare?");
+        Toast.makeText(getApplicationContext(), "Images saved.", Toast.LENGTH_LONG).show();
     }
 
     private double calculateStandardDeviation(float average, int mode) {
@@ -454,10 +446,9 @@ public class SampleActivity extends Activity {
         runOnUiThread(() -> mAmplitudeView.setImageBitmap(Bitmap.createScaledBitmap(mBitmap,
                 mResolution[0] * mScaleFactor,
                 mResolution[1] * mScaleFactor, false)));
-        FB element = new FB(mBitmap, (int)System.currentTimeMillis());
+        Bitmap bitmap = Bitmap.createBitmap(mBitmap);
+        FB element = new FB(bitmap, (int)System.currentTimeMillis());
         frames_buffer_pico.add(element);
-
-        //Log.d(TAG,"Sto catturando i frames di pico");
     }
 
     /*
@@ -532,6 +523,7 @@ public class SampleActivity extends Activity {
 
         if (mBitmap == null) {
             mBitmap = Bitmap.createBitmap(mResolution[0], mResolution[1], Bitmap.Config.ARGB_8888);
+
         }
     }
 
