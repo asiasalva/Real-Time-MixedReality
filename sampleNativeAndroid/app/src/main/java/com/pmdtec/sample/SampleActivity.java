@@ -2,15 +2,13 @@ package com.pmdtec.sample;
 
 import android.app.*;
 import android.content.*;
-import android.content.pm.PackageManager;
 import android.graphics.*;
-import android.hardware.camera2.CameraDevice;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.hardware.usb.*;
 import android.media.MediaPlayer;
-import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.*;
-import android.provider.MediaStore;
 import android.util.*;
 import android.view.*;
 import android.widget.*;
@@ -19,11 +17,10 @@ import android.media.MediaMetadataRetriever;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.*;
 
-import wseemann.media.FFmpegMediaMetadataRetriever;
+
+import static java.lang.Math.abs;
 
 public class SampleActivity extends Activity {
 
@@ -31,7 +28,10 @@ public class SampleActivity extends Activity {
     //private static int click_count_camera = 0;
     private static int starting_clicks = 0;
     private static int click_count_registration = 0;
+    public static boolean flagFrames = true;
 
+    public static ArrayList<FB> frames_buffer = new ArrayList<>();
+    public static ArrayList<FB> frames_buffer_pico = new ArrayList<>();
     private static final String TAG = "ApplicationLogCat";
     private static final String ACTION_USB_PERMISSION = "ACTION_ROYALE_USB_PERMISSION";
 
@@ -46,6 +46,9 @@ public class SampleActivity extends Activity {
 
     private int mScaleFactor;
     private int[] mResolution;
+
+    public Calendar c = new GregorianCalendar();
+
 
     private static Uri last_video_path;
 
@@ -91,6 +94,31 @@ public class SampleActivity extends Activity {
         Button btnStartProc = findViewById(R.id.btnStartProc);
         mAmplitudeView = findViewById(R.id.imageViewAmplitude);
 
+
+        Thread picoReg = new Thread(){
+            @Override
+            public void start(){
+                openCamera();
+            }
+            @Override
+            public void run(){
+                startRecordRRF();
+            }
+        };
+        Thread camReg = new Thread(){
+            @Override
+            public void start(){
+                FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                transaction.replace(R.id.cameraView, camera2video);
+                transaction.addToBackStack(null);
+                transaction.commit();
+            }
+            @Override
+            public void run(){
+                camera2video.startRecordingVideo();
+            }
+        };
+
         btnStart.setOnClickListener(v -> {
             Log.d(TAG, "btnStart Listener");
 
@@ -99,21 +127,27 @@ public class SampleActivity extends Activity {
                 Log.e(TAG, "Too much start clicks. Camera already Started.");
                 Toast.makeText(getApplicationContext(), "Too much start clicks. Can't start already started cameras.", Toast.LENGTH_LONG).show();
             } else {
-                //Opening Pico
-                openCamera();
-
                 //Opening mobile camera
-                FragmentTransaction transaction = getFragmentManager().beginTransaction();
-                transaction.replace(R.id.cameraView, camera2video);
-                transaction.addToBackStack(null);
-                transaction.commit();
+                camReg.start();
+                //Opening Pico
+                picoReg.start();
             }
 
         });
 
+
         btnStop.setOnClickListener(v -> {
             Log.d(TAG, "btnStop Listener");
-            //Create a logic to stop application or to go ahead in making the reconstruction
+
+            //Temporaneamente
+            flagFrames = false;
+            onDestroy();
+            camera2video.onDestroy();
+
+            workOnFrames();
+
+            //Create a logic to stop application
+
         });
 
         btnStartRec.setOnClickListener(v -> {
@@ -121,8 +155,9 @@ public class SampleActivity extends Activity {
             click_count_registration++;
             if (!(click_count_registration > 1)) {
                 btnStartRec.setText("StopRec");
-                camera2video.startRecordingVideo();
-                startRecordRRF();
+                picoReg.run();
+                camReg.run();
+                //startRecordRRF();*/
             } else {
                 btnStartRec.setText("StartRec");
                 click_count_registration--;
@@ -139,6 +174,159 @@ public class SampleActivity extends Activity {
             //Process the RRF file in a PLY file foreach frame
             processRRF();
         });
+    }
+
+    private void createImage(int comparable) {
+        //0 mobile, 1 pico
+        Log.d(TAG,"create image");
+
+        Random r = new Random();
+        int folder_id = r.nextInt(1000) + 1;
+
+        String folder = getExternalFilesDir(null) + "/videos/comparisons/" + folder_id + "/";
+        File saveFolder = new File(folder);
+        if (!saveFolder.exists()) {
+            saveFolder.mkdirs();
+        }
+
+        int j = 1;
+        if( comparable == 0)
+        {
+            for (FB fb : frames_buffer)
+            {
+                if (!(fb == null))
+                {
+                    ByteArrayOutputStream mobile_bytes = new ByteArrayOutputStream();
+                    ByteArrayOutputStream pico_bytes = new ByteArrayOutputStream();
+
+                    fb.linked.bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
+
+                    File mob_file = new File(saveFolder, ("mobile_frame" +j + ".jpg"));
+                    File pico_file = new File(saveFolder, ("pico_frame" + j + ".jpg"));
+                    try {
+                        mob_file.createNewFile();
+                        pico_file.createNewFile();
+                        FileOutputStream mob_fo = new FileOutputStream(mob_file);
+                        FileOutputStream pico_fo = new FileOutputStream(pico_file);
+                        fb.bitmap.compress(Bitmap.CompressFormat.JPEG, 100, mobile_bytes);
+                        mob_fo.write(mobile_bytes.toByteArray());
+                        pico_fo.write(pico_bytes.toByteArray());
+                        mob_fo.flush();
+                        pico_fo.flush();
+                        mob_fo.close();
+                        pico_fo.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Log.e(TAG, "Error: " + e.toString());
+                    }
+                    j++;
+                }
+            }
+        }
+        else
+        {
+            Log.d(TAG,"Dimensione del buffer di Pico = "+frames_buffer_pico.size());
+
+            for (int i=0; i<frames_buffer_pico.size(); i++)
+            {
+                if( ! (frames_buffer_pico.get(i) == null ))
+                {
+                    ByteArrayOutputStream mobile_bytes = new ByteArrayOutputStream();
+                    ByteArrayOutputStream pico_bytes = new ByteArrayOutputStream();
+                    Log.d(TAG,"Inizio a salvare l'immagine di "+frames_buffer_pico.get(i).timestamp+" e di " + frames_buffer_pico.get(i).linked.timestamp);
+                    frames_buffer_pico.get(i).bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
+                    frames_buffer_pico.get(i).linked.bitmap.setHasAlpha(true);
+                    frames_buffer_pico.get(i).linked.bitmap.compress(Bitmap.CompressFormat.PNG, 10, mobile_bytes);
+                    //fb.linked.bitmap.compress(Bitmap.CompressFormat.PNG, 40, mobile_bytes);
+                    //Log.d(TAG,"Ho eseguito la compressione dei bitmap");
+                    File mob_file = new File(saveFolder, ("mobile_frame" + j + ".png"));
+                    File pico_file = new File(saveFolder, ("pico_frame" + j + ".jpg"));
+
+                    try {
+                        //Log.d(TAG,"try");
+                        mob_file.createNewFile();
+                        pico_file.createNewFile();
+                        FileOutputStream mob_fo = new FileOutputStream(mob_file);
+                        FileOutputStream pico_fo = new FileOutputStream(pico_file);
+                        mob_fo.write(mobile_bytes.toByteArray());
+                        pico_fo.write(pico_bytes.toByteArray());
+                        mob_fo.flush();
+                        pico_fo.flush();
+                        mob_fo.close();
+                        pico_fo.close();
+                        //Log.d(TAG,"Fine try");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Log.e(TAG, "Error: " + e.toString());
+                    }
+                    //Log.d(TAG,"Immagini "+i+" salvate correttamente");
+                    j++;
+                }
+            }
+        }
+    }
+    private void workOnFrames() {
+
+        Log.d(TAG, "Sample Activity.workOnFrames");
+        int comparable = FrameBuffer.compareFrames(frames_buffer,frames_buffer_pico);
+
+        //Faccio una media
+        int sub_value;
+        int sum = 0;
+        float average_mobile;
+        float average_pico;
+        for(int i=0; i<frames_buffer.size();i++){
+            if( i+1 != frames_buffer.size()) {
+                sub_value = abs(frames_buffer.get(i).timestamp) - abs(frames_buffer.get(i+1).timestamp);
+                sum = sum + sub_value;
+            }
+        }
+        average_mobile = sum / (float)(frames_buffer.size());
+        sub_value = 0;
+        sum = 0;
+        for(int i=0; i<frames_buffer_pico.size();i++){
+            if( i+1 != frames_buffer_pico.size()) {
+                sub_value = abs(frames_buffer_pico.get(i).timestamp) - abs(frames_buffer_pico.get(i+1).timestamp);
+                sum = sum + sub_value;
+            }
+        }
+        average_pico = sum / (float)(frames_buffer_pico.size());
+        double dev_mobile = calculateStandardDeviation(average_mobile,0);
+        double dev_pico = calculateStandardDeviation(average_pico,1);
+        createImage(comparable);
+
+        Toast.makeText(getApplicationContext(), "Images saved.", Toast.LENGTH_LONG).show();
+    }
+
+    private double calculateStandardDeviation(float average, int mode) {
+
+        double dev = 0;
+        double sub;
+        double sum = 0;
+        double pow;
+
+        //mode: 0=mobile, 1=pico
+        if(mode == 0)
+        {
+            for(int i=0; i<frames_buffer.size();i++)
+            {
+                sub = (float)frames_buffer.get(i).timestamp - average;
+                pow = Math.pow(sub,2);
+                sum = sum + pow;
+                dev = Math.sqrt(sum / (frames_buffer.size()));
+            }
+        }
+        else
+        {
+            for(int i=0; i<frames_buffer_pico.size();i++)
+            {
+                sub = (float)frames_buffer_pico.get(i).timestamp - average;
+                pow = Math.pow(sub,2);
+                sum = sum + pow;
+                dev = Math.sqrt(sum / (frames_buffer_pico.size()));
+            }
+        }
+        return dev;
     }
 
     private void processRRF() {
@@ -220,6 +408,7 @@ public class SampleActivity extends Activity {
         } else {
             Toast.makeText(getApplicationContext(), "File correctly saved", Toast.LENGTH_SHORT).show();
         }
+
     }
 
     /*
@@ -248,6 +437,7 @@ public class SampleActivity extends Activity {
      * Will be invoked on a new frame captured by the camera.
      */
     public void onAmplitudes(int[] amplitudes) {
+        Log.d(TAG,"amplitude: "+amplitudes.toString());
         if (!mOpened) {
             Log.d(TAG, "Device in Java not initialized");
             return;
@@ -256,6 +446,9 @@ public class SampleActivity extends Activity {
         runOnUiThread(() -> mAmplitudeView.setImageBitmap(Bitmap.createScaledBitmap(mBitmap,
                 mResolution[0] * mScaleFactor,
                 mResolution[1] * mScaleFactor, false)));
+        Bitmap bitmap = Bitmap.createBitmap(mBitmap);
+        FB element = new FB(bitmap, (int)System.currentTimeMillis());
+        frames_buffer_pico.add(element);
     }
 
     /*
@@ -330,6 +523,7 @@ public class SampleActivity extends Activity {
 
         if (mBitmap == null) {
             mBitmap = Bitmap.createBitmap(mResolution[0], mResolution[1], Bitmap.Config.ARGB_8888);
+
         }
     }
 
@@ -367,6 +561,25 @@ public class SampleActivity extends Activity {
         }
     }
 
+    public static Bitmap drawableToBitmap (Drawable drawable) {
+        Bitmap bitmap = null;
+
+        if (drawable instanceof BitmapDrawable) {
+            BitmapDrawable bitmapDrawable = (BitmapDrawable) drawable;
+            if(bitmapDrawable.getBitmap() != null) {
+                return bitmapDrawable.getBitmap();
+            }
+        }
+
+        if(drawable.getIntrinsicWidth() <= 0 || drawable.getIntrinsicHeight() <= 0) {
+            bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888); // Single color bitmap will be created of 1x1 pixel
+        } else {
+            bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        }
+
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+        return bitmap;
+    }
 }
-
-
