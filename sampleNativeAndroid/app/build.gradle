@@ -83,4 +83,5 @@ dependencies {
     //implementation project(path: ':camera2video')
     implementation project(path: ':camera2video')
     api project(path: ':openCv')
+    api 'com.drewnoakes:metadata-extractor:2.11.0'
 }

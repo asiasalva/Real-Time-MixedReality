@@ -5,7 +5,11 @@ import android.content.*;
 import android.graphics.*;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.hardware.usb.*;
+import android.media.ImageReader;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.*;
@@ -13,6 +17,19 @@ import android.util.*;
 import android.view.*;
 import android.widget.*;
 import android.media.MediaMetadataRetriever;
+
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.imaging.jpeg.JpegMetadataReader;
+import com.drew.imaging.jpeg.JpegProcessingException;
+import com.drew.imaging.jpeg.JpegSegmentMetadataReader;
+import com.drew.metadata.exif.ExifReader;
+import com.drew.metadata.iptc.IptcReader;
+
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Metadata;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -23,6 +40,7 @@ import java.util.*;
 
 
 import static java.lang.Math.abs;
+import static java.lang.Math.floor;
 
 public class SampleActivity extends Activity {
 
@@ -35,6 +53,7 @@ public class SampleActivity extends Activity {
     private static final String TAG = "ApplicationLogCat";
     private static final String ACTION_USB_PERMISSION = "ACTION_ROYALE_USB_PERMISSION";
 
+    private static Camera2Video camera2video;
     private static String file;
     private UsbManager mUSBManager;
     private UsbDeviceConnection mUSBConnection;
@@ -47,6 +66,10 @@ public class SampleActivity extends Activity {
     private int[] mResolution;
     private static Uri last_video_path;
 
+    private static float pxWidth;
+    private static float pxHeight;
+    private static int bitmapWidth = 0;
+    private static int bitmapHeight = 0;
     /**
      * Broadcast receiver for user usb permission dialog
      */
@@ -82,7 +105,7 @@ public class SampleActivity extends Activity {
 
         Log.d(TAG, "onCreate()");
 
-        Camera2Video camera2video = Camera2Video.newInstance();
+        camera2video = Camera2Video.newInstance();
         Button btnStart = findViewById(R.id.buttonStart);
         Button btnStartRec = findViewById(R.id.btnStartRec);
         Button btnStop = findViewById(R.id.btnStop);
@@ -140,6 +163,7 @@ public class SampleActivity extends Activity {
             onDestroy();
             camera2video.onDestroy();
             saveBuffersInfo();
+
             workOnFrames();
             //Create a logic to stop application
 
@@ -227,6 +251,7 @@ public class SampleActivity extends Activity {
             saveFolder.mkdirs();
         }
 
+        File imagePath = null;
         int j = 1;
         if (comparable == 0) {
             for (FB fb : frames_buffer) {
@@ -237,6 +262,9 @@ public class SampleActivity extends Activity {
                     fb.bitmap.compress(Bitmap.CompressFormat.PNG, 10, mobile_bytes);
                     fb.linked.bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
                     File mob_file = new File(saveFolder, ("mobile_frame" + j + ".png"));
+                    if(imagePath == null){
+                        imagePath = mob_file;
+                    }
                     File pico_file = new File(saveFolder, ("pico_frame" + j + ".jpg"));
                     try {
                         if(! mob_file.createNewFile() && ! pico_file.createNewFile())
@@ -261,9 +289,17 @@ public class SampleActivity extends Activity {
         }
         else
         {
+
             for (FB fb : frames_buffer_pico)
             {
                 if (!(fb.bitmap == null)) {
+                    if(bitmapHeight == 0 && bitmapWidth==0){
+                        bitmapHeight = fb.linked.bitmap.getHeight();
+                        bitmapWidth = fb.linked.bitmap.getWidth();
+                        Log.d(TAG," bitmapWidth: "+fb.linked.bitmap.getWidth()+" bitmapHeight "+ fb.linked.bitmap.getHeight());
+                        Log.d(TAG," bitmapWidth: "+bitmapWidth+" bitmapHeight "+ bitmapHeight);
+
+                    }
                     ByteArrayOutputStream mobile_bytes = new ByteArrayOutputStream();
                     ByteArrayOutputStream pico_bytes = new ByteArrayOutputStream();
                     fb.bitmap.compress(Bitmap.CompressFormat.JPEG, 40, pico_bytes);
@@ -271,6 +307,9 @@ public class SampleActivity extends Activity {
                     fb.linked.bitmap.compress(Bitmap.CompressFormat.PNG, 10, mobile_bytes);
                     File mob_file = new File(saveFolder, ("mobile_frame" + j + ".png"));
                     File pico_file = new File(saveFolder, ("pico_frame" + j + ".jpg"));
+                    if(imagePath == null){
+                        imagePath = mob_file;
+                    }
                     try {
                         if(! mob_file.createNewFile() || ! pico_file.createNewFile())
                         {
@@ -329,9 +368,41 @@ public class SampleActivity extends Activity {
         Log.i(TAG, "Mobile Data Average: "+average_mobile+" Mobile Data Standard Deviation: "+dev_mobile);
         Log.i(TAG, "Pico Data Average: "+average_pico+" Pico Data Standard Deviation: "+dev_pico);
 
+
         //Creating images
         int images_number = createImage(comparable);
         Toast.makeText(getApplicationContext(), "Correctly saved "+images_number+" images.", Toast.LENGTH_LONG).show();
+        getMobileChar();
+
+
+
+    }
+
+    private void getMobileChar() {
+        Activity activity = camera2video.getAct();
+        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        String cameraId = null;
+        CameraCharacteristics chars = null;
+        try {
+            cameraId = manager.getCameraIdList()[0];
+            CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+            SizeF sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+            float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+            float fl = 0;
+            if (focalLengths != null && focalLengths.length > 0) {
+                Log.d(TAG,"Sono nell;'if");
+                fl = focalLengths[0];
+                Log.d(TAG," bitmapWidth: "+bitmapWidth+" bitmapHeight "+ bitmapHeight);
+                pxWidth = (bitmapWidth*fl)/sensorSize.getWidth();
+                pxHeight = (bitmapHeight*fl)/sensorSize.getHeight();
+                float fx = fl/pxWidth;
+                float fy = fl/pxHeight;
+                Log.d(TAG,"fl: "+ fl + " px: "+ pxWidth + " py: "+pxHeight+" fx: "+fx+" fy: "+fy);
+            }
+        }catch (CameraAccessException ex)
+        {
+            Log.e(TAG,"Error: "+ex);
+        }
     }
 
     /**
@@ -596,7 +667,15 @@ public class SampleActivity extends Activity {
         }
     }
 
-    @Override
+    //bitmap = RotateBitmap(bitmap, 90);
+
+    public static Bitmap RotateBitmap(Bitmap source, float angle) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+    }
+
+        @Override
     protected void onPause() {
         Log.i(TAG, "SampleActivity.onPause");
         super.onPause();

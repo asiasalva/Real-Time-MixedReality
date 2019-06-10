@@ -39,4 +39,9 @@ public final class NativeCamera
     public static native void semaphoreNotify(boolean notify);
 
     public static native int convertToPLY(String file_name);
+
+    public static native float getXFocalLength();
+    public static native float getYFocalLength();
+    public static native float getXFocalCenter();
+    public static native float getYFocalCenter();
 }
