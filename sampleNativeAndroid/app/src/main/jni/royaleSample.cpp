@@ -35,6 +35,8 @@ bool notified;
 royale::LensParameters lens_p;
 uint16_t x;
 uint16_t y;
+uint16_t max = 0;
+uint16_t min = 65535;
 
 #define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define LOGI(...)  __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
@@ -64,6 +66,12 @@ namespace
 
     uint16_t width = 0;
     uint16_t height = 0;
+    const float DEFAULT_MIN_DISTANCE = 10;
+    int SEGMENT_MIN_STRENGTH = 300;
+    float MAX_DIST_TO_STRENGTHEN = 0.1; // 5 centimeters
+    const int SEGMENT_COUNT = 6;
+    const int MAX_RETRY_COUNT = 10;
+    const int SEGMENT_BAD_DISTANCE = 1100;
 
     class MyListener : public royale::IDepthDataListener
     {
@@ -80,8 +88,7 @@ namespace
             }
 
             // Determine min and max value and calculate span.
-            uint16_t max = 0;
-            uint16_t min = 65535;
+
 
             size_t i;
             size_t n = width * height;
@@ -90,16 +97,19 @@ namespace
             for (i = 0; i < n; i++)
             {
                 const auto point = data->points.at (i);
+                //LOGI("%0.4f",point.z);
 
-                if (point.grayValue < min)
+                if (point.z < min)
                 {
-                    min = point.grayValue;
+                    min = point.z;
                 }
-                if (point.grayValue > max)
+                if (point.z > max)
                 {
-                    max = point.grayValue;
+                    max = point.z;
                 }
             }
+
+            LOGI("max: %d",max);
 
             uint16_t span = max - min;
 
@@ -109,41 +119,136 @@ namespace
                 span = 1;
             }
 
-            // Fill a temp structure to use to populate the java int array;
-            jint fill[n];
-            for (i = 0; i < n; i++)
+            int r = 204;
+            int g = 204;
+            int b = 51;
+            int a = 255;
+
+            // fill a temp structure to use to populate the java int array
+            jint fill[width * height];
+            jfloat rawFill[width * height];
+
+            for (i = 0; i < width * height; i++)
             {
                 // use min value and span to have values between 0 and 255 (for visualisation)
-                fill[i] = (int) ( ( (data->points.at (i).grayValue - min) / (float) span) * 255.0f);
+                fill[i] = (int) (((data->points.at (i).z - min) / span) * 255.0f);
+                rawFill[i] = data->points.at (i).z;
+
                 // set same value for red, green and blue; alpha to 255; to create gray image
-                fill[i] = fill[i] | fill[i] << 8 | fill[i] << 16 | 255 << 24;
+                if (fill[i] > 255 || fill[i] < 0 || fill[i] == 0) {
+                  fill[i] = 0 | 0 << 8 | 0 << 16 | 255 << 24;
+                } else {
+                    fill[i] =  (254 & 0xff )<< 24 | (255-fill[i] & 0xff) << 16 | (fill[i]&0xff) << 8 | 0& 0xff;
+                }
+
             }
 
-            // Attach to the JavaVM thread and get a JNI interface pointer.
-            JNIEnv *env;
-            javaVM->AttachCurrentThread (&env, NULL);
 
-            // Cast the n value to an java size type
-            auto jN = static_cast<jsize> (n);
+
+            // filter stray pixels
+            for (i = 1; i < width * height - 1; i++) {
+                if (rawFill[i] != 0.0f && rawFill[i-1] <= 0.0 && rawFill[i+1] <= 0.0) {
+                    fill[i] = 255 | 0 << 8 | 0 << 16 | 255 << 24;
+                    rawFill[i] = 0;
+                }
+            }
+
+            jfloat segmentCloseness[SEGMENT_COUNT];
+            jfloat segmentMins[SEGMENT_COUNT];
+            for (i = 0; i < SEGMENT_COUNT; i++) {
+                segmentMins[i] = DEFAULT_MIN_DISTANCE;
+            }
+            jint segmentMinStrengths[SEGMENT_COUNT];
+            for (i = 0; i < SEGMENT_COUNT; i++) {
+                segmentMinStrengths[i] = 0;
+            }
+
+            float segmentWidth = width / 6;
+            int badDataCount = 0;
+            int segmentRetryCount = 0;
+            bool gotIt = false;
+
+            while (!gotIt && segmentRetryCount < MAX_RETRY_COUNT){
+                for (i = 0; i < width * height; i++)
+                {
+                    int segmentIndex = (int) ((i % width) / segmentWidth);
+                    if (segmentMinStrengths[segmentIndex] > SEGMENT_MIN_STRENGTH) {
+                        continue; // we already have this segment down, YEAH!!
+                    }
+                    if (rawFill[i] <= 0) {
+                        badDataCount++;
+                        continue; // skip bad data
+                    }
+                    if (rawFill[i] == segmentMins[segmentIndex]) {
+                        rawFill[i] = 0; // mark not strong enough minimum as bad, delete! :(
+                    }
+                    if (rawFill[i] < segmentMins[segmentIndex]) {
+                        segmentMins[segmentIndex] = rawFill[i];
+                    }
+                }
+
+                for (i = 0; i < width * height; i++)
+                {
+                    if (rawFill[i] == 0) {
+                        continue; // skip bad data
+                    }
+                    int segmentIndex = (int) ((i % width) / segmentWidth);
+                    if (rawFill[i] - MAX_DIST_TO_STRENGTHEN < segmentMins[segmentIndex]) {
+                        segmentMinStrengths[segmentIndex] += 1;
+                    }
+                }
+
+                int okCount = 0;
+                for (i = 0; i < SEGMENT_COUNT; i++) {
+                    if (segmentMinStrengths[i] > SEGMENT_MIN_STRENGTH) {
+                        okCount++;
+                    }
+                }
+                gotIt = okCount == SEGMENT_COUNT;
+                segmentRetryCount++;
+            }
+
+            jint segmentMinCentis[SEGMENT_COUNT];
+            for (i = 0; i < SEGMENT_COUNT; i++) {
+                if (segmentMinStrengths[i] < SEGMENT_MIN_STRENGTH) {
+                    segmentMinCentis[i] = SEGMENT_BAD_DISTANCE;
+                } else {
+                    segmentMinCentis[i] = (int) (segmentMins[i] * 100);
+                }
+            }
+
+            // attach to the JavaVM thread and get a JNI interface pointer
+            JNIEnv *env;
+            javaVM->AttachCurrentThread ( (JNIEnv **) &env, NULL);
 
             // create java int array
-            jintArray intArray = env->NewIntArray (jN);
+            jintArray intArray = env->NewIntArray (width * height);
+            jfloatArray rawFloatArray = env->NewFloatArray (width * height);
+            jintArray minDistanceIntArray = env->NewIntArray (6);
+            jintArray minDistanceStrengthIntArray = env->NewIntArray (6);
 
             // populate java int array with fill data
-            env->SetIntArrayRegion (intArray, 0, jN, fill);
+            env->SetIntArrayRegion (intArray, 0, width * height, fill);
+            env->SetFloatArrayRegion (rawFloatArray, 0, width * height, rawFill);
+            env->SetIntArrayRegion (minDistanceIntArray, 0, 6, segmentMinCentis);
+            env->SetIntArrayRegion (minDistanceStrengthIntArray, 0, 6, segmentMinStrengths);
 
             // call java method and pass amplitude array
-            env->CallVoidMethod (jAmplitudeListenerObj, jAmplitudeListener_onAmplitudes, intArray);
+
+            env->CallVoidMethod (jAmplitudeListenerObj, jAmplitudeListener_onAmplitudes, intArray, rawFloatArray, minDistanceIntArray, minDistanceStrengthIntArray, min, max, badDataCount, segmentRetryCount);
 
             // detach from the JavaVM thread
-            javaVM->DetachCurrentThread ();
+            javaVM->DetachCurrentThread();
         }
     };
 
-    /**
- * This variables are used to ensure that the
- * main method is open until the camera has stopped capture.
- */
+    MyListener l;
+
+
+    /*
+     * This variables are used to ensure that the
+     * main method is open until the camera has stopped capture.
+     */
     std::mutex mtx;
     std::condition_variable condition;
 
@@ -369,6 +474,8 @@ namespace
     JNIEXPORT jintArray JNICALL
     Java_com_pmdtec_sample_NativeCamera_openCameraNative (JNIEnv *env, jclass type, jint fd, jint vid, jint pid)
     {
+        // std::unique_ptr<MyListener> listener;
+
         // the camera manager will query for a connected camera
         {
             auto cFD = static_cast<uint32_t> (fd);
@@ -394,11 +501,6 @@ namespace
         }
 
         // IMPORTANT: call the initialize method before working with the camera device;
-        //royale::CallbackData Depth;
-        //royale::CallbackData Raw;
-        //cameraDevice->setCallbackData(Raw);
-        //cameraDevice->setCallbackData(0x002);
-        //royale::IDepthDataListener
         auto ret = cameraDevice->initialize ();
         if (ret != royale::CameraStatus::SUCCESS)
         {
@@ -408,10 +510,6 @@ namespace
         royale::Vector<royale::String> opModes;
         royale::String cameraName;
         royale::String cameraId;
-        royale::Vector<std::uint8_t> calibrationData;
-
-        ret = cameraDevice->getCalibrationData(calibrationData);
-        LOGE("calibration data: %d", (int)ret);
 
         ret = cameraDevice->getUseCases (opModes);
         if (ret != royale::CameraStatus::SUCCESS)
@@ -429,19 +527,6 @@ namespace
         if (ret != royale::CameraStatus::SUCCESS)
         {
             LOGI ("Failed to get max sensor height, CODE %d", (int) ret);
-        }
-
-
-        ret = cameraDevice -> getLensParameters(lens_p);
-        if (ret != royale::CameraStatus::SUCCESS)
-        {
-            LOGI ("Failed to get camera parameters, CODE %d", (int) ret);
-        }
-
-        ret = cameraDevice->getLensCenter(x,y);
-        if (ret != royale::CameraStatus::SUCCESS)
-        {
-            LOGI ("Failed to get camera lens center, CODE %d", (int) ret);
         }
 
         ret = cameraDevice->getId (cameraId);
@@ -471,25 +556,28 @@ namespace
             LOGI ("    %s", opModes.at (i).c_str ());
         }
 
+        // set an operation mode
+        ret = cameraDevice->setUseCase (opModes[1]);
+        if (ret != royale::CameraStatus::SUCCESS)
+        {
+            LOGI ("Failed to set use case, CODE %d", (int) ret);
+        }
+
+
         // register a data listener
-        ret = cameraDevice->registerDataListener (&listener);
+        ret = cameraDevice->registerDataListener(&l);
         if (ret != royale::CameraStatus::SUCCESS)
         {
             LOGI ("Failed to register data listener, CODE %d", (int) ret);
         }
 
-        // set an operation mode
-        ret = cameraDevice->setUseCase (opModes[0]);
-        if (ret != royale::CameraStatus::SUCCESS)
-        {
-            LOGI ("Failed to set use case, CODE %d", (int) ret);
-        }
 
         ret = cameraDevice->startCapture();
         if (ret != royale::CameraStatus::SUCCESS)
         {
             LOGI ("Failed to start capture, CODE %d", (int) ret);
         }
+
 
         jint fill[2];
         fill[0] = width;
@@ -501,6 +589,13 @@ namespace
 
         return intArray;
     }
+
+    JNIEXPORT void JNICALL
+    Java_com_royale_royaleandroidexample_MainActivity_setCameraParams (JNIEnv *env, jobject thiz, jint tresholdCm, jint minStrength) {
+        MAX_DIST_TO_STRENGTHEN = tresholdCm / 100.0f;
+        SEGMENT_MIN_STRENGTH = minStrength;
+    }
+
 
     JNIEXPORT void JNICALL
     Java_com_pmdtec_sample_NativeCamera_registerAmplitudeListener (JNIEnv *env, jclass type, jobject amplitudeListener)
