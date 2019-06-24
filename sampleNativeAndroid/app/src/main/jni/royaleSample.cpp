@@ -66,12 +66,13 @@ namespace
 
     uint16_t width = 0;
     uint16_t height = 0;
-    const float DEFAULT_MIN_DISTANCE = 10;
+
+    const float DEFAULT_MIN_DISTANCE = 10; //def 10
     int SEGMENT_MIN_STRENGTH = 300;
     float MAX_DIST_TO_STRENGTHEN = 0.1; // 5 centimeters
     const int SEGMENT_COUNT = 6;
     const int MAX_RETRY_COUNT = 10;
-    const int SEGMENT_BAD_DISTANCE = 1100;
+    const int SEGMENT_BAD_DISTANCE = 1100; //def 1100
 
     class MyListener : public royale::IDepthDataListener
     {
@@ -81,35 +82,33 @@ namespace
             * There might be different ExposureTimes per RawFrameSet resulting in a vector of
             * exposureTimes, while however the last one is fixed and purely provided for further
             * reference. */
+            auto sampleVector (data->exposureTimes);
 
-            if (data->exposureTimes.size () >= 3)
+            if (sampleVector.size() > 2)
             {
-                LOGI ("ExposureTimes: %d, %d, %d", data->exposureTimes.at (0), data->exposureTimes.at (1), data->exposureTimes.at (2));
+                LOGI ("ExposureTimes: %d, %d, %d", sampleVector.at (0), sampleVector.at (1), sampleVector.at (2));
             }
 
+
             // Determine min and max value and calculate span.
-
-
             size_t i;
             size_t n = width * height;
 
-            // Linear search for max and min grayValue.
+            uint16_t max = 0;
+            uint16_t min = 65535;
             for (i = 0; i < n; i++)
             {
-                const auto point = data->points.at (i);
-                //LOGI("%0.4f",point.z);
-
-                if (point.z < min)
+                if (data->points.at (i).z < min)
                 {
-                    min = point.z;
+                    min = data->points.at (i).z;
                 }
-                if (point.z > max)
+                if (data->points.at (i).z > max)
                 {
-                    max = point.z;
+                    max = data->points.at (i).z;
                 }
             }
 
-            LOGI("max: %d",max);
+           // LOGI("max: %d",max);
 
             uint16_t span = max - min;
 
@@ -119,31 +118,75 @@ namespace
                 span = 1;
             }
 
-            int r = 204;
-            int g = 204;
-            int b = 51;
-            int a = 255;
-
             // fill a temp structure to use to populate the java int array
             jint fill[width * height];
             jfloat rawFill[width * height];
 
+            double a;
+            int x;
+            int y;
+
             for (i = 0; i < width * height; i++)
             {
-                // use min value and span to have values between 0 and 255 (for visualisation)
-                fill[i] = (int) (((data->points.at (i).z - min) / span) * 255.0f);
-                rawFill[i] = data->points.at (i).z;
-
-                // set same value for red, green and blue; alpha to 255; to create gray image
-                if (fill[i] > 255 || fill[i] < 0 || fill[i] == 0) {
-                  fill[i] = 0 | 0 << 8 | 0 << 16 | 255 << 24;
-                } else {
-                    fill[i] =  (254 & 0xff )<< 24 | (255-fill[i] & 0xff) << 16 | (fill[i]&0xff) << 8 | 0& 0xff;
+                //fill[i] = (int) (((data->points.at (i).z - min) / span) * 255.0f);
+                if (data->points.at(i).z < 0.1)
+                {
+                    fill[i] = (int)0.1;
+                    rawFill[i] = 0.1;
+                } else if (data->points.at(i).z > 1.0)
+                {
+                    fill[i] = (int)1.0;
+                    rawFill[i] = 1.0;
+                } else{
+                    // use min value and span to have values between 0 and 255 (for visualisation)
+                    fill[i] = (int) (((data->points.at (i).z - min) / span) * 255.0f);
+                    rawFill[i] = data->points.at (i).z;
                 }
 
+                a = (1-data->points.at(i).z)/0.25;
+                x = (int)a;
+                y = (int)(255*(a-x));
+    //BRG
+                if (x == 0)
+                {
+                    fill[i] = 0 | 255 << 8 | fill[i] << 16 | 255 << 24;
+                }
+                else if ( x== 1){
+                    fill[i] = 0 |  255-fill[i] << 8 | 255 << 16 | 255 << 24;
+                }
+                else if(x==2){
+                    fill[i] = fill[i] |  0 << 8 | 255 << 16 | 255 << 24;
+                }
+                else if (x==3){
+                    fill[i] = fill[i] | 0 << 8 | 255-fill[i] << 16 | 255 << 24;
+                }
+                else if(x==4){
+                    fill[i] = 255 |  0 << 8 | 0 << 16 | 255 << 24;
+                }
+                //rawFill[i] = data->points.at (i).z;
+                /*if (data->points.at(i).z < 0.1)
+                {
+                    fill[i] = 0.1;
+                    rawFill[i] = 0.1;
+                } else if (data->points.at(i).z > 1.0)
+                {
+                    fill[i] = 1.0;
+                    rawFill[i] = 1.0;
+                } else{
+                    // use min value and span to have values between 0 and 255 (for visualisation)
+                    fill[i] = (int) (((data->points.at (i).z - min) / span) * 255.0f);
+                    rawFill[i] = data->points.at (i).z;
+                }
+*/
+
+                //set same value for red, green and blue; alpha to 255; to create gray image
+                /*if (fill[i] > 255 || fill[i] < 0 || fill[i] == 0) {
+                  fill[i] = 0 | 0 << 8 | 0 << 16 | 255 << 24;
+                } else {
+                    fill[i] = 51 |  fill[i] << 8 | 255-fill[i] << 16 | 255 << 24;
+                            //0 |  fill[i] << 8 | 255-fill[i] << 16 | 255 << 24;
+                }*/
             }
-
-
 
             // filter stray pixels
             for (i = 1; i < width * height - 1; i++) {
@@ -153,6 +196,7 @@ namespace
                 }
             }
 
+            //Controllo i segmenti eliminando i dati che creano troppo rumore
             jfloat segmentCloseness[SEGMENT_COUNT];
             jfloat segmentMins[SEGMENT_COUNT];
             for (i = 0; i < SEGMENT_COUNT; i++) {
@@ -180,7 +224,7 @@ namespace
                         continue; // skip bad data
                     }
                     if (rawFill[i] == segmentMins[segmentIndex]) {
-                        rawFill[i] = 0; // mark not strong enough minimum as bad, delete! :(
+                        rawFill[i] = 0; // mark not strong enough minimum as bad, delete
                     }
                     if (rawFill[i] < segmentMins[segmentIndex]) {
                         segmentMins[segmentIndex] = rawFill[i];
@@ -242,7 +286,7 @@ namespace
         }
     };
 
-    MyListener l;
+    //MyListener l;
 
 
     /*
@@ -285,9 +329,6 @@ namespace
             // https://en.wikipedia.org/wiki/PLY_(file_format)
             std::ofstream outputFile;
             std::stringstream stringStream;
-            //std::vector xvector;
-            //std::vector yvector;
-            //std::vector zvector;
 
             outputFile.open ("/storage/emulated/0/Android/data/com.pmdtec.sample56/files/"+filename, std::ofstream::out | std::ofstream::app );
 
@@ -321,38 +362,9 @@ namespace
 
                 // output stringstream to file and close it
                 outputFile << stringStream.str();
-
-                //Now convert scalar to RGB colormap foreach frame
-                //createColorMap(filename, zvector);
-                outputFile.flush();
-                outputFile.close();
             }
         }
 
-        /*void createColorMap(std::string filename, std::vector zvector)
-        {
-            LOGI("Sono nella ColorMapFunction");
-            LOGI("Filename: %s", filename);
-
-
-
-            auto a=(1-f)/0.25;	//invert and group
-            auto X=Math.floor(a);	//this is the integer part
-            auto Y=Math.floor(255*(a-X)); //fractional part from 0 to 255
-            switch(X)
-            {
-                case 0: r=255;g=Y;b=0;break;
-                case 1: r=255-Y;g=255;b=0;break;
-                case 2: r=0;g=255;b=Y;break;
-                case 3: r=0;g=255-Y;b=255;break;
-                case 4: r=0;g=0;b=255;break;
-            }
-            ctx.fillStyle = "rgb("+r+","+g+","+b+")";
-            ctx.fillRect(i,30,1,20);
-
-            fclose(colorFile);
-
-        }*/
 
         void onNewData (const royale::DepthData *data)
         {
@@ -556,21 +568,22 @@ namespace
             LOGI ("    %s", opModes.at (i).c_str ());
         }
 
-        // set an operation mode
-        ret = cameraDevice->setUseCase (opModes[1]);
-        if (ret != royale::CameraStatus::SUCCESS)
-        {
-            LOGI ("Failed to set use case, CODE %d", (int) ret);
-        }
-
 
         // register a data listener
-        ret = cameraDevice->registerDataListener(&l);
+        ret = cameraDevice->registerDataListener(&listener);
         if (ret != royale::CameraStatus::SUCCESS)
         {
             LOGI ("Failed to register data listener, CODE %d", (int) ret);
         }
 
+        // set an operation mode
+        ret = cameraDevice->setUseCase (opModes[5]);
+        if (ret != royale::CameraStatus::SUCCESS)
+        {
+            LOGI ("Failed to set use case, CODE %d", (int) ret);
+        }
+
+        cameraDevice->setExposureMode(royale::ExposureMode::AUTOMATIC);
 
         ret = cameraDevice->startCapture();
         if (ret != royale::CameraStatus::SUCCESS)
@@ -783,21 +796,6 @@ namespace
         return focalCenterY;
     }
 
-    /*JNIEXPORT jfloat JNICALL
-    Java_com_pmdtec_sample_NativeCamera_getInfosCamera(JNIEnv *env, jclass type) {
-        static void myResultCallback(
-                void* context, ACameraCaptureSession* session,
-                ACaptureRequest* request, const ACameraMetadata* result){
-
-            ACameraMetadata_const_entry entry;
-            ACameraMetadata_getConstEntry(result,
-                                          ACAMERA_LENS_INTRINSIC_CALIBRATION, &entry);
-            LOGI("Camera Intrinsics: %f ,%f , %f, %f, %f", entry.data.f[0],
-                 entry.data.f[1],entry.data.f[2],entry.data.f[3],entry.data.f[4]);
-        };
-
-        float f[] = ACAMERA_LENS_INTRINSIC_CALIBRATION;
-    }*/
 #ifdef __cplusplus
 }
 #endif
