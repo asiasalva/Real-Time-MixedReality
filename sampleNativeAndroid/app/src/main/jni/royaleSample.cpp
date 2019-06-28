@@ -110,7 +110,7 @@ namespace
 
            // LOGI("max: %d",max);
 
-            uint16_t span = max - min;
+            float span = max - min;
 
             // Prevent division by zero.
             if (!span)
@@ -146,7 +146,7 @@ namespace
                 a = (1-data->points.at(i).z)/0.25;
                 x = (int)a;
                 y = (int)(255*(a-x));
-    //BRG
+                //BRG
                 if (x == 0)
                 {
                     fill[i] = 0 | 255 << 8 | fill[i] << 16 | 255 << 24;

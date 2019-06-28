@@ -31,8 +31,8 @@ public class FrameBuffer {
     public static int compareFrames(ArrayList<FB> mobile_buffer, ArrayList<FB> pico_buffer) {
 
         Log.d(TAG, "FrameBuffer.compareFrames");
-        //Log.e(TAG, "mobile_buffer size :" + mobile_buffer.size());
-        //Log.e(TAG, "pico buffer size: " + pico_buffer.size());
+        Log.e(TAG, "mobile_buffer size :" + mobile_buffer.size());
+        Log.e(TAG, "pico buffer size: " + pico_buffer.size());
 
         int ret_value;
         int link_position;
@@ -46,12 +46,17 @@ public class FrameBuffer {
             }
             ret_value = 1; //pico buffer < mobile buffer
         } else {
+            Log.d(TAG, "mobile frames buffer piu piccolo");
             for (int i = 0; i < mobile_buffer.size(); i++) {
                 link_position = findNearest(mobile_buffer.get(i), pico_buffer);
-                mobile_buffer.get(i).addLinked(pico_buffer.get(link_position));
+                if (!(link_position == -1)) {
+                    mobile_buffer.get(i).addLinked(pico_buffer.get(link_position));
+                }
             }
+
             ret_value = 0;
         }
+        Log.d(TAG,"ho finito di confrontare i frames, ritorno");
         return ret_value;
     }
 
@@ -70,10 +75,10 @@ public class FrameBuffer {
         double delta;
         double delta_succ;
         int size = buffer.size();
-
+        //Log.d(TAG,"timestamp = "+timestamp+" size = "+ size);
         delta = buffer.get(0).timestamp - timestamp;
 
-        for (int i = 1; i <= size - 1; i++) {
+        for (int i = 1; i <= size-1; i++) {
             delta_succ = buffer.get(i).timestamp - timestamp;
             if (abs(delta) <= abs(delta_succ)) {
                 linked_position = i - 1;
@@ -82,6 +87,7 @@ public class FrameBuffer {
                 delta = delta_succ;
             }
         }
+        Log.d(TAG,"linked position: "+linked_position);
         return linked_position;
     }
 }
@@ -90,7 +96,7 @@ public class FrameBuffer {
  * Class representing a frameBuffer element:
  * each FB element has a bitmap and a timestamp.
  * The "linked" FB element is the corresponding frame I find with findNearest function.
- * Bu default, linked does not exist: it will add only when will be found.
+ * By default, linked does not exist: it will add only when will be found.
  */
 class FB {
 

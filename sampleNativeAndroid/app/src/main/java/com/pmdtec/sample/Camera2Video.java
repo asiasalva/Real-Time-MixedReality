@@ -145,10 +145,10 @@ public class Camera2Video extends Fragment
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
-            if (SampleActivity.flagFrames) {
+            if (AutomaticActivity.flagFrames) {
                 Bitmap frame = mTextureView.getBitmap();
                 FB element = new FB(frame, (int) System.currentTimeMillis());
-                SampleActivity.frames_buffer.add(element);
+                AutomaticActivity.frames_buffer.add(element);
             }
         }
 

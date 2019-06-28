@@ -11,4 +11,7 @@
     <string name="startproc">StartProc</string>
     <string name="record">Record</string>
     <string name="start">start</string>
+    <string name="select_mode">Scegli una modalità:</string>
+    <string name="automatic">Automatic</string>
+    <string name="manual">Manual</string>
 </resources>
