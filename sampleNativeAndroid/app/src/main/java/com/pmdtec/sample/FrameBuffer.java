@@ -3,6 +3,9 @@ package com.pmdtec.sample;
 import android.graphics.Bitmap;
 import android.util.Log;
 import java.util.ArrayList;
+
+import wseemann.media.Metadata;
+
 import static java.lang.Math.abs;
 
 public class FrameBuffer {

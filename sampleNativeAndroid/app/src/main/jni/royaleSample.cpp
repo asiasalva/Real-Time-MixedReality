@@ -19,12 +19,22 @@
 #include <string>
 #include <sys/stat.h>
 #include <math.h>
+#include <camera/NdkCameraCaptureSession.h>
+#include <camera/NdkCameraDevice.h>
+#include <camera/NdkCameraError.h>
+#include <camera/NdkCameraManager.h>
+#include <camera/NdkCameraMetadata.h>
+#include <camera/NdkCameraMetadataTags.h>
+#include <camera/NdkCaptureRequest.h>
 
 #define TAG "com.pmdtec.jroyale.jni"
 
 // this represents the main camera device object
 std::unique_ptr<royale::ICameraDevice> cameraDevice;
 bool notified;
+royale::LensParameters lens_p;
+uint16_t x;
+uint16_t y;
 
 #define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define LOGI(...)  __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
@@ -421,6 +431,19 @@ namespace
             LOGI ("Failed to get max sensor height, CODE %d", (int) ret);
         }
 
+
+        ret = cameraDevice -> getLensParameters(lens_p);
+        if (ret != royale::CameraStatus::SUCCESS)
+        {
+            LOGI ("Failed to get camera parameters, CODE %d", (int) ret);
+        }
+
+        ret = cameraDevice->getLensCenter(x,y);
+        if (ret != royale::CameraStatus::SUCCESS)
+        {
+            LOGI ("Failed to get camera lens center, CODE %d", (int) ret);
+        }
+
         ret = cameraDevice->getId (cameraId);
         if (ret != royale::CameraStatus::SUCCESS)
         {
@@ -447,7 +470,6 @@ namespace
         {
             LOGI ("    %s", opModes.at (i).c_str ());
         }
-
 
         // register a data listener
         ret = cameraDevice->registerDataListener (&listener);
@@ -644,6 +666,43 @@ namespace
         return 0;
     }
 
+    JNIEXPORT jfloat JNICALL
+    Java_com_pmdtec_sample_NativeCamera_getXFocalLength(JNIEnv *env, jclass type) {
+        float focalLX  = lens_p.focalLength.first;
+        return focalLX;
+
+    }
+    JNIEXPORT jfloat JNICALL
+    Java_com_pmdtec_sample_NativeCamera_getYFocalLength(JNIEnv *env, jclass type) {
+        float focalLY  = lens_p.focalLength.second;
+        return focalLY;
+    }
+    JNIEXPORT jfloat JNICALL
+    Java_com_pmdtec_sample_NativeCamera_getXFocalCenter(JNIEnv *env, jclass type) {
+        float focalCenterX  = x;
+        return focalCenterX;
+    }
+    JNIEXPORT jfloat JNICALL
+    Java_com_pmdtec_sample_NativeCamera_getYFocalCenter(JNIEnv *env, jclass type) {
+        float focalCenterY  = y;
+        return focalCenterY;
+    }
+
+    /*JNIEXPORT jfloat JNICALL
+    Java_com_pmdtec_sample_NativeCamera_getInfosCamera(JNIEnv *env, jclass type) {
+        static void myResultCallback(
+                void* context, ACameraCaptureSession* session,
+                ACaptureRequest* request, const ACameraMetadata* result){
+
+            ACameraMetadata_const_entry entry;
+            ACameraMetadata_getConstEntry(result,
+                                          ACAMERA_LENS_INTRINSIC_CALIBRATION, &entry);
+            LOGI("Camera Intrinsics: %f ,%f , %f, %f, %f", entry.data.f[0],
+                 entry.data.f[1],entry.data.f[2],entry.data.f[3],entry.data.f[4]);
+        };
+
+        float f[] = ACAMERA_LENS_INTRINSIC_CALIBRATION;
+    }*/
 #ifdef __cplusplus
 }
 #endif

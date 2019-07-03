@@ -8,6 +8,7 @@ import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -24,16 +25,21 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.ImageReader;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Size;
+import android.util.SizeF;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -42,9 +48,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 import com.example.android.camera2video.AutoFitTextureView;
+
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -52,6 +63,12 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+import wseemann.media.Metadata;
+
+import static android.content.Context.CAMERA_SERVICE;
+import static android.hardware.camera2.CaptureResult.LENS_INTRINSIC_CALIBRATION;
+import static java.lang.Math.atan;
 
 public class Camera2Video extends Fragment
         implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback {
@@ -423,6 +440,8 @@ public class Camera2Video extends Fragment
         Log.d(TAG, "Width: " + width);
         Log.d(TAG, "Height: " + height);
 
+        //setUpCameraOutputs(width,height);
+
         if (!hasPermissionsGranted(VIDEO_PERMISSIONS)) {
             requestVideoPermissions();
             return;
@@ -441,8 +460,7 @@ public class Camera2Video extends Fragment
 
             // Choose the sizes for camera preview and video recording
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
-            StreamConfigurationMap map = characteristics
-                    .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             if (map == null) {
                 throw new RuntimeException("Cannot get available preview/video sizes");
@@ -507,6 +525,7 @@ public class Camera2Video extends Fragment
      * Start the camera preview.
      */
     private void startPreview() {
+
         Log.d(TAG, "Start preview");
         if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
             return;
@@ -517,6 +536,13 @@ public class Camera2Video extends Fragment
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
+            //Get focal length
+            Activity activity = getActivity();
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity);
+            String focus = sharedPreferences.getString("prefFocusLength", "5.0");
+            mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, Float.parseFloat(focus));
+
 
             Surface previewSurface = new Surface(texture);
             mPreviewBuilder.addTarget(previewSurface);
@@ -543,6 +569,140 @@ public class Camera2Video extends Fragment
         }
     }
 
+
+    private float getFOV(CameraCharacteristics info) {
+        Log.d(TAG,"HFOV");
+        SizeF sensorSize = info.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+        Log.d(TAG,"Sensor size: "+sensorSize);
+        float[] focalLengths = info.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+
+        if (focalLengths != null && focalLengths.length > 0) {
+            Log.d(TAG,"focalLentgh " + focalLengths[0]);
+            Log.d(TAG,"Ret: "+ (2.0f * atan(sensorSize.getWidth() / (2.0f * focalLengths[0]))));
+            return (float) (2.0f * atan(sensorSize.getWidth() / (2.0f * focalLengths[0])));
+        }
+
+        return 1.1f;
+    }
+
+    private float getFL(CameraCharacteristics info) {
+        float[] focalLengths = info.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+        if (focalLengths != null && focalLengths.length > 0) {
+            Log.d(TAG,"focalLentgh " + focalLengths[0]);
+            return focalLengths[0];
+        }
+        return 1.1f;
+    }
+
+    private float getXFL(CameraCharacteristics info) {
+        SizeF sensorSize = info.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+        Log.d(TAG,"Sensor size: "+sensorSize);
+        float[] focalLengths = info.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+
+        if (focalLengths != null && focalLengths.length > 0) {
+            Log.d(TAG,"focalLentghx " + focalLengths[0]/sensorSize.getWidth());
+            return focalLengths[0]/sensorSize.getWidth();
+        }
+
+        return 1.1f;
+    }
+    private float getYFL(CameraCharacteristics info) {
+        SizeF sensorSize = info.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+        Log.d(TAG,"Sensor size: "+sensorSize);
+        float[] focalLengths = info.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+
+        if (focalLengths != null && focalLengths.length > 0) {
+            Log.d(TAG,"focalLentghy " + focalLengths[0]/sensorSize.getHeight());
+            return focalLengths[0]/sensorSize.getHeight();
+        }
+
+        return 1.1f;
+    }
+    private float getCenterY(CameraCharacteristics info) {
+        Log.d(TAG,"HFOV");
+        SizeF sensorSize = info.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+        Log.d(TAG,"Sensor size: "+sensorSize);
+        Log.d(TAG,"ret:  "+ (sensorSize.getHeight()) / (2));
+        return (sensorSize.getHeight()) / (2);
+    }
+
+    private float getCenterX(CameraCharacteristics info) {
+        Log.d(TAG,"HFOV");
+        SizeF sensorSize = info.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+        Log.d(TAG,"Sensor size: "+sensorSize);
+        Log.d(TAG,"ret:  "+ (sensorSize.getWidth()) / (2));
+        return (sensorSize.getWidth()) / (2);
+    }
+
+    /*private void setUpCameraOutputs(int width, int height) {
+
+        Log.d(TAG, "camera output");
+        Activity activity = getActivity();
+        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        Log.d(TAG, "camera output");
+        if(android.os.Build.VERSION.SDK_INT >= 23) {
+            Log.d(TAG, "if");
+            String cameraId = null;
+            CameraCharacteristics chars = null;
+            //int FOV_x = 2 * atan( (chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)) / (2* (chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS))));
+
+            try {
+                Log.d(TAG, "try");
+                //final CameraCharacteristics.Key<float[]> lensIntrinsicCalibration = CameraCharacteristics.LENS_INTRINSIC_CALIBRATION;
+                //float[] intr = chars.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION);
+                cameraId = manager.getCameraIdList()[0];
+                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+
+                float fl = getFL(characteristics);
+                float fov = getFOV(characteristics);
+                float center_x = getCenterX(characteristics);
+                float center_y = getCenterY(characteristics);
+                float fx = getXFL(characteristics);
+                float fy = getYFL(characteristics);
+
+                Log.d(TAG,"Lunghezza focale: "+fl+" fx: "+fx+" fy: "+fy+" cx: "+center_x+" cy: "+center_y);
+
+                Mat dev_mat = new Mat();
+                Mat.eye(3, 3, CvType.CV_64FC1).copyTo(dev_mat);
+                dev_mat.put(0,0, fx); // f_x
+                dev_mat.put(1,1, fy); // f_y
+                dev_mat.put(0,2, center_x); // c_x
+                dev_mat.put(1,2, center_y); // c_y
+
+
+               /* float pico_focal_length_x = NativeCamera.getXFocalLength();
+                float pico_focal_length_y = NativeCamera.getYFocalLength();
+                float pico_focal_center_x = NativeCamera.getXFocalCenter();
+                float pico_focal_center_y = NativeCamera.getYFocalCenter();
+
+                Log.d(TAG, "pico fl x: "+pico_focal_length_x +" pico fl y: "+ pico_focal_length_y+ " pico fc x :" +pico_focal_center_x + " pico fc y: "+pico_focal_center_y);*/
+                /*float[] intrinsic = intr;
+                Mat dev_mat = new Mat();
+                Mat.eye(3, 3, CvType.CV_64FC1).copyTo(dev_mat);
+                dev_mat.put(0,0, intr[0]); // f_x
+                dev_mat.put(1,1, intr[1]); // f_y
+                dev_mat.put(0,2, intr[2]); // c_x
+                dev_mat.put(1,2, intr[3]); // c_y
+                dev_mat.put(0,1, intr[4]); // skew
+
+                Log.d(TAG, "LENS_INTRINSIC_CALIBRATION: "
+                        + intr[0] + " " +intr[1] + " " + intr[2] + " " + intr[3]+ " " +intr[4] + " " +intr[5]);
+                //IN OGNI CASO RITORNA NULL
+                // A QUANTO PARE NON HO IL LIVELLO DI ACCESSO PER QUESTE INFORMAZIONI
+                /*for (int i = 0; i < 5; i++) {
+                    Log.d(TAG, "elementi: " + intrinsic[i]);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "error " + e);
+            }
+
+        }
+        else
+        {
+            Log.e(TAG,"problema grande");
+        }
+    }
+    */
     /**
      * Update the camera preview. {@link #startPreview()} needs to be called in advance.
      */
@@ -593,6 +753,8 @@ public class Camera2Video extends Fragment
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         }
         mTextureView.setTransform(matrix);
+
+
     }
 
     private void setUpMediaRecorder() throws IOException {
@@ -656,7 +818,6 @@ public class Camera2Video extends Fragment
             surfaces.add(recorderSurface);
             mPreviewBuilder.addTarget(recorderSurface);
 
-
             // Start a capture session
             // Once the session starts, we can update the UI and start recording
             mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
@@ -706,6 +867,11 @@ public class Camera2Video extends Fragment
             mPreviewSession.close();
             mPreviewSession = null;
         }
+    }
+
+    public Activity getAct(){
+        Activity activity = getActivity();
+        return activity;
     }
 
     public String stopRecordingVideo() {
@@ -779,6 +945,7 @@ public class Camera2Video extends Fragment
         }
 
     }
+
 
     public static class ConfirmationDialog extends DialogFragment {
 
