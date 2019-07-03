@@ -127,15 +127,16 @@ public class SampleActivity extends Activity {
         Thread camReg = new Thread() {
             @Override
             public void start() {
-                FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                /*FragmentTransaction transaction = getFragmentManager().beginTransaction();
                 transaction.replace(R.id.cameraView, camera2video);
                 transaction.addToBackStack(null);
-                transaction.commit();
+                transaction.commit();*/
+                Log.d(TAG,"Apro la camera normale");
             }
 
             @Override
             public void run() {
-                camera2video.startRecordingVideo();
+                //camera2video.startRecordingVideo();
             }
         };
 
@@ -161,10 +162,10 @@ public class SampleActivity extends Activity {
             //Temporaneamente
             flagFrames = false;
             onDestroy();
-            camera2video.onDestroy();
-            saveBuffersInfo();
+            //camera2video.onDestroy();
+            //saveBuffersInfo();
 
-            workOnFrames();
+            //workOnFrames();
             //Create a logic to stop application
 
         });
@@ -180,7 +181,7 @@ public class SampleActivity extends Activity {
             } else {
                 btnStartRec.setText("StartRec");
                 click_count_registration--;
-                last_video_path = Uri.parse(camera2video.stopRecordingVideo());
+                //last_video_path = Uri.parse(camera2video.stopRecordingVideo());
                 stopRecordRRF();
             }
         });
@@ -188,7 +189,7 @@ public class SampleActivity extends Activity {
         btnStartProc.setOnClickListener(v -> {
             Log.d(TAG, "btnStartProc Listener");
             //Start Processing mobile camera video
-            startProcessing();
+            //startProcessing();
             //Process the RRF file in a PLY file foreach frame
             processRRF();
         });
